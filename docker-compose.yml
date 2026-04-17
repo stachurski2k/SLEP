@@ -1,9 +1,20 @@
 name: slep
 
 services:
-  data-collection-s3:
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-data:/data  
+    command: redis-server --appendonly yes  
+    networks:
+      - slep-network
+
+  s3:
     image: minio/minio
-    container_name: data-collection-s3
+    container_name: s3
     ports:
       - 9000:9000 #S3 API
       - 9001:9001 #Web
@@ -11,12 +22,13 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - data-collection-s3-data:/data
+      - s3-data:/data
     networks:
       - slep-network
     command: server /data --console-address ":9001"
-  data-collection-postgres:
-    container_name: data-collection-postgres
+
+  postgres:
+    container_name: postgres
     image: postgres:17
     restart: always
     environment:
@@ -28,17 +40,46 @@ services:
     networks:
       - slep-network
     volumes:
-      - data-collection-postgres-data:/var/lib/postgressql/data
+      - postgres-data:/var/lib/postgressql/data
 
 
-  data-collection-backend:
+  data-collection-api:
     build:
       context: ./src/data-collection-backend
-    container_name: data-collection-backend
+    container_name: data-collection-api
     ports:
-      - 8000:8000
+      - 5000:5000
     environment:
       - UV_ENVIRONMENT=Development
+    networks:
+      - slep-network
+    depends_on:
+      - redis
+      - s3
+    command: uvicorn app.main:app --host 0.0.0.0 --port 5000 
+
+  data-collection-worker:
+    build:
+      context: ./src/data-collection-backend
+    container_name: data-collection-worker
+    environment:
+      - UV_ENVIRONMENT=Development
+    networks:
+      - slep-network
+    depends_on:
+      - redis
+    volumes:
+      - ./src/data-collection-backend/tmp:/tmp-dir
+    command: celery -A app.workers.celery_app worker --loglevel=info
+    
+  data-collection-flower:  # optional: Worker monitoring UI
+    build: 
+      context: ./src/data-collection-backend
+    command: celery -A app.workers.celery_app flower --port=5555
+    ports:
+      - 5555:5555
+    depends_on:
+      - data-collection-worker
     networks:
       - slep-network
 
@@ -49,13 +90,14 @@ services:
     ports:
       - 3000:80
     depends_on:
-      - data-collection-backend
+      - data-collection-api
     networks:
       - slep-network
 
 volumes:
-  data-collection-s3-data:
-  data-collection-postgres-data:
+  s3-data:
+  postgres-data:
+  redis-data:
 
 networks:
   slep-network:

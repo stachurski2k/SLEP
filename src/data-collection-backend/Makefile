@@ -12,7 +12,7 @@ sync: ## Install dependencies for the specific app (e.g., make install APP=live)
 	uv sync
 
 run: ## Run uv app
-	uv run main.py
+	uv run app.main.py
 
 docker-build: ## Build the Docker image for the app
 	sudo docker build -t $(IMAGE_NAME) .
