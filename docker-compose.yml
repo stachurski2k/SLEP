@@ -1,0 +1,62 @@
+name: slep
+
+services:
+  data-collection-s3:
+    image: minio/minio
+    container_name: data-collection-s3
+    ports:
+      - 9000:9000 #S3 API
+      - 9001:9001 #Web
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - data-collection-s3-data:/data
+    networks:
+      - slep-network
+    command: server /data --console-address ":9001"
+  data-collection-postgres:
+    container_name: data-collection-postgres
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_DB: slep
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - 5432:5432
+    networks:
+      - slep-network
+    volumes:
+      - data-collection-postgres-data:/var/lib/postgressql/data
+
+
+  data-collection-backend:
+    build:
+      context: ./src/data-collection-backend
+    container_name: data-collection-backend
+    ports:
+      - 8000:8000
+    environment:
+      - UV_ENVIRONMENT=Development
+    networks:
+      - slep-network
+
+  data-collection-frontend:
+    container_name: data-collection-frontend
+    build:
+      context: ./src/data-collection-frontend
+    ports:
+      - 3000:80
+    depends_on:
+      - data-collection-backend
+    networks:
+      - slep-network
+
+volumes:
+  data-collection-s3-data:
+  data-collection-postgres-data:
+
+networks:
+  slep-network:
+    driver: bridge
