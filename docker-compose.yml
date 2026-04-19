@@ -22,7 +22,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - s3-data:/data
+      - /mnt/data:/data
     networks:
       - slep-network
     command: server /data --console-address ":9001"
@@ -95,7 +95,6 @@ services:
       - slep-network
 
 volumes:
-  s3-data:
   postgres-data:
   redis-data:
 
