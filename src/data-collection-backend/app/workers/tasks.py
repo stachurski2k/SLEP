@@ -145,6 +145,20 @@ def process_video(self, video_id: int):
         s3_key = npy_filename
         s3_service.upload(local_npy_path, s3_key)
 
+
+        # 5. Save landmark data in the database
+        async def _add_landmark():
+            async with AsyncSessionLocal() as session:
+                try:
+                    crud = VideoCrud(session)
+                    await crud.add_landmark(video_id, s3_key)
+                    await session.commit()
+                except Exception as e:
+                    await session.rollback()
+                    raise e
+                    
+        run_async(_add_landmark())
+
         return s3_key
 
     except Exception as exc:
