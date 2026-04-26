@@ -1,19 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.dependencies import get_db
+
+from app.api.v1.gesture_classes.schemas import GestureClassRequest
 from app.crud.gesture_class import GestureClassCrud
+from app.dependencies import get_db
 from app.schemas.gesture_class import GestureClassSchema
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/gesture-classes", tags=["gesture-classes"])
 
 
-class GestureClassBody(BaseModel):
-    name: str
-
-
 @router.post("/", response_model=GestureClassSchema)
-async def create_gesture_class(body: GestureClassBody, db: AsyncSession = Depends(get_db)):
+async def create_gesture_class(body: GestureClassRequest, db: AsyncSession = Depends(get_db)):
     return await GestureClassCrud(db).create(body.name)
 
 
@@ -31,7 +28,7 @@ async def get_gesture_class(gesture_class_id: int, db: AsyncSession = Depends(ge
 
 
 @router.patch("/{gesture_class_id}", response_model=GestureClassSchema)
-async def update_gesture_class(gesture_class_id: int, body: GestureClassBody, db: AsyncSession = Depends(get_db)):
+async def update_gesture_class(gesture_class_id: int, body: GestureClassRequest, db: AsyncSession = Depends(get_db)):
     result = await GestureClassCrud(db).update(gesture_class_id, body.name)
     if not result:
         raise HTTPException(status_code=404, detail="Gesture class not found")

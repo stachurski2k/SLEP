@@ -15,6 +15,7 @@ services:
   s3:
     image: minio/minio
     container_name: s3
+    hostname: s3
     ports:
       - 9000:9000 #S3 API
       - 9001:9001 #Web
@@ -29,7 +30,8 @@ services:
 
   s3-dev:
     image: minio/minio
-    container_name: s3
+    container_name: s3-dev
+    hostname: s3
     ports:
       - 9000:9000 #S3 API
       - 9001:9001 #Web
