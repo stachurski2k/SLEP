@@ -7,6 +7,6 @@ class GestureType(Base):
     __tablename__ = "gesture_types"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column("name")
+    name: Mapped[str] = mapped_column()
 
     clips: Mapped["Clip"] = relationship(back_populates="gesture_type")
