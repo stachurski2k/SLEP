@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.core.logging import setup_logging
 from app.api.v1.videos import router as videos_router
+from app.api.v1.s3 import router as s3_router
 from app.api.v1.datasets import router as datasets_router
 from app.api.v1.exported_datasets import router as exported_datasets_router
 from app.api.v1.export_dataset_jobs import router as export_dataset_jobs_router
@@ -19,6 +20,7 @@ app = FastAPI(
 setup_logging()
 
 app.include_router(videos_router, prefix="/api/v1")
+app.include_router(s3_router, prefix="/api/v1")
 app.include_router(datasets_router, prefix="/api/v1")
 app.include_router(exported_datasets_router, prefix="/api/v1")
 app.include_router(export_dataset_jobs_router, prefix="/api/v1")
