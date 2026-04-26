@@ -47,7 +47,7 @@
   min-height: 0;
 }
 
-.sidebar {
+.navbar {
   padding: 24px 18px;
   border-right: 1px solid var(--border);
   background: rgba(8, 12, 18, 0.84);
@@ -96,7 +96,7 @@
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
+  .navbar {
     padding: 16px 20px 0;
     border-right: 0;
     border-bottom: 1px solid var(--border);

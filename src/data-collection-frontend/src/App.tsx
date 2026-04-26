@@ -1,28 +1,14 @@
 import Editor from './components/Editor'
+import Navbar from './ui/Navbar'
+import Topbar from './ui/Topbar'
 import './App.css'
 
 function App() {
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="brand-lockup">
-          <span className="brand-mark" aria-hidden="true" />
-          <div>
-            <p className="eyebrow">Editing workspace</p>
-            <h1>SLEP video</h1>
-          </div>
-        </div>
-      </header>
-
+      <Topbar />
       <div className="workspace">
-        <aside className="sidebar" aria-label="Primary">
-          <nav className="nav-panel">
-            <button className="nav-item nav-item-active" type="button">
-              Video editor
-            </button>
-          </nav>
-        </aside>
-
+        <Navbar />
         <main className="editor-view">
           <Editor />
         </main>
