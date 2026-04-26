@@ -27,6 +27,21 @@ services:
       - slep-network
     command: server /data --console-address ":9001"
 
+  s3-dev:
+    image: minio/minio
+    container_name: s3
+    ports:
+      - 9000:9000 #S3 API
+      - 9001:9001 #Web
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - s3-data:/data
+    networks:
+      - slep-network
+    command: server /data --console-address ":9001"
+
   postgres:
     container_name: postgres
     image: postgres:17
@@ -55,7 +70,6 @@ services:
       - slep-network
     depends_on:
       - redis
-      - s3
     command: uvicorn app.main:app --host 0.0.0.0 --port 5000 
 
   data-collection-worker:
@@ -97,6 +111,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  s3-data:
 
 networks:
   slep-network:
