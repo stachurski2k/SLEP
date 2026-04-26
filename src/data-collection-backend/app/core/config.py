@@ -10,7 +10,7 @@ class Config(BaseSettings):
     db_user: str = "postgres"
     db_password: str = "postgres"
     db_name: str = "slep"
-    db_host: str = "postgres"
+    db_host: str = "localhost"
     db_port: int = 5432
     redis_url: str = "redis://redis:6379/0"
     s3_url: str = "http://s3:9000"
