@@ -19,9 +19,9 @@ RUN groupadd --system --gid 999 nonroot \
 RUN mkdir -p /app/models && chown -R nonroot:nonroot /app/models
 
 # 3. Download the model as ROOT (so curl works) but save to the owned folder
-RUN curl -L https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task \
-    -o /app/models/hand_landmarker.task \
-    && chown nonroot:nonroot /app/models/hand_landmarker.task
+RUN curl -L https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/1/holistic_landmarker.task \
+    -o /app/models/holistic_landmarker.task \
+    && chown nonroot:nonroot /app/models/holistic_landmarker.task
 
 WORKDIR /app
 
