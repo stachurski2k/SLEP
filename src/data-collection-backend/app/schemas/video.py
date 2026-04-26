@@ -16,6 +16,10 @@ class VideoSchema(BaseModel):
     id: int
     name: str
     filepath: str
+    description: str
+    fps: int
+    total_length_seconds: float
+    dataset_id: int | None
     landmarks: list[LandmarkSchema] = []
     clips: list[ClipSchema] = []
 

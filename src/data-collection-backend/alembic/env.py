@@ -20,6 +20,10 @@ if alembic_config.config_file_name is not None:
 # import data models
 from app.db.database import Base
 from app.models.video import Video
+from app.models.import_video_job import ImportVideoJob, ImportVideoJobStatusEnum
+from app.models.export_dataset_job import ExportDatasetJob, ExportDatasetJobStatusEnum
+from app.models.dataset import Dataset
+from app.models.exported_dataset import ExportedDataset
 from app.models.clip import Clip
 from app.models.gesture_type import GestureType
 from app.models.gesture_class import GestureClass

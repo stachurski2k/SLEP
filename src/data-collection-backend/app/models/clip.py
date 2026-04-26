@@ -12,13 +12,13 @@ class Clip(Base):
     end_frame_index: Mapped[int] = mapped_column()
 
     #foreign keys
-    video_id: Mapped[int] = mapped_column(ForeignKey("videos.id"))
+    video_id: Mapped[int] = mapped_column(ForeignKey("videos.id",ondelete="CASCADE"))
     video: Mapped["Video"] = relationship(back_populates="clips")
 
-    gesture_class_id: Mapped[int] = mapped_column(ForeignKey("gesture_classes.id"))
+    gesture_class_id: Mapped[int] = mapped_column(ForeignKey("gesture_classes.id",ondelete="CASCADE"))
     gesture_class: Mapped["GestureClass"] = relationship(back_populates="clips")
 
-    gesture_type_id: Mapped[int] = mapped_column(ForeignKey("gesture_types.id"))
+    gesture_type_id: Mapped[int] = mapped_column(ForeignKey("gesture_types.id",ondelete="CASCADE"))
     gesture_type: Mapped["GestureType"] = relationship(back_populates="clips")
 
 

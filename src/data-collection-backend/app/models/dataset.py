@@ -3,12 +3,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
 from app.db.database import Base
 
-class GestureClass(Base):
-    __tablename__ = "gesture_classes"
+class Dataset(Base):
+    __tablename__ = "datasets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column()
+    name: Mapped[str] = mapped_column(String, index=True)
+    description: Mapped[str] = mapped_column(String)
 
-    clips: Mapped["Clip"] = relationship(back_populates="gesture_class")
+    videos: Mapped[list["Video"]] = relationship(back_populates="dataset")
+
 
 

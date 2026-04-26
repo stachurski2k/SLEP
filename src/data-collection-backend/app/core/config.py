@@ -14,6 +14,7 @@ class Config(BaseSettings):
     db_port: int = 5432
     redis_url: str = "redis://redis:6379/0"
     s3_url: str = "http://s3:9000"
+    s3_public_url: str = "http://localhost:9000"
     s3_user: str = "minioadmin"
     s3_password: str = "minioadmin"
     s3_bucket: str = "slep-bucket"
