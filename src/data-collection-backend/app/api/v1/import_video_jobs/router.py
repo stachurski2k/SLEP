@@ -5,13 +5,14 @@ from app.api.v1.import_video_jobs.schemas import ImportVideoJobCreateRequest
 from app.crud.import_video_job import ImportVideoJobCrud
 from app.dependencies import get_db
 from app.schemas.import_video_job import ImportVideoJobSchema
+from app.services.video import VideoService
 
 router = APIRouter(prefix="/import-video-jobs", tags=["import-video-jobs"])
 
 
 @router.post("/", response_model=ImportVideoJobSchema)
 async def create_import_video_job(body: ImportVideoJobCreateRequest, db: AsyncSession = Depends(get_db)):
-    return await ImportVideoJobCrud(db).create(
+    return await VideoService(db).create_video_import_job(
         body.video_name, body.video_filepath, body.video_description, body.dataset_id
     )
 
