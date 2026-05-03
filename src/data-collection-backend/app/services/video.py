@@ -20,18 +20,6 @@ class VideoService:
             description,
             dataset_id
         )
-
-        ## TODO: schedule background processing
-
-        video = await self.video_crud.create(
-            name,
-            filepath,
-            description,
-            30,
-            10,
-            dataset_id,
-        )
-
-        # process_video.delay(video_id = video.id)
+        process_video.delay(job.id)
 
         return ImportVideoJobSchema.model_validate(job)
