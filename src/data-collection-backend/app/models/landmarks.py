@@ -7,7 +7,8 @@ class Landmark(Base):
     __tablename__ = 'landmarks'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    filepath: Mapped[str] = mapped_column()
+    filepath: Mapped[str] = mapped_column(String) # the landmarks file
+    landmark_on_video_preview_path: Mapped[str | None] = mapped_column()
 
-    video_id: Mapped[int] = mapped_column(ForeignKey("videos.id"))
+    video_id: Mapped[int] = mapped_column(ForeignKey("videos.id", ondelete="CASCADE"))
     video: Mapped["Video"] = relationship(back_populates="landmarks")
