@@ -11,6 +11,12 @@ export type DatasetPayload = {
   description: string
 }
 
+export type Video = {
+  id: number
+  name: string
+  filepath: string
+}
+
 async function requestJson<T>(
   path: string,
   options?: RequestInit,
@@ -26,6 +32,31 @@ async function requestJson<T>(
 
 export function getDatasets() {
   return requestJson<Dataset[]>('/api/v1/datasets/')
+}
+
+export function getDataset(datasetId: number) {
+  return requestJson<Dataset>(`/api/v1/datasets/${datasetId}`)
+}
+
+export function getVideos({
+  page,
+  limit,
+  datasetId,
+}: {
+  page: number
+  limit: number
+  datasetId: number | null
+}) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  })
+
+  if (datasetId !== null) {
+    params.set('dataset_id', String(datasetId))
+  }
+
+  return requestJson<Video[]>(`/api/v1/videos/?${params.toString()}`)
 }
 
 export function createDataset(payload: DatasetPayload) {

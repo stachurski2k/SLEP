@@ -1,30 +1,34 @@
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { createDataset, getDatasets } from '../actions'
 import type { Dataset, DatasetPayload } from '../actions'
 import DatasetEditorDialog from './DatasetEditorDialog'
-import './DatasetManager.css'
+import {
+  panelClass,
+  panelLabelClass,
+  primaryButtonClass,
+  summaryPillClass,
+} from '../ui/classes'
 
-export default function DatasetManager() {
+type DatasetManagerProps = {
+  onOpenDataset: (dataset: Dataset) => void
+}
+
+export default function DatasetManager({ onOpenDataset }: DatasetManagerProps) {
   const [datasets, setDatasets] = useState<Dataset[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const loadDatasets = useCallback(async () => {
     setIsLoading(true)
-    setError(null)
 
     try {
       const nextDatasets = await getDatasets()
       setDatasets(nextDatasets)
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Unable to load datasets',
-      )
+    } catch {
+      setDatasets([])
+      toast.error('Unable to load datasets')
     } finally {
       setIsLoading(false)
     }
@@ -36,65 +40,85 @@ export default function DatasetManager() {
 
   const handleCreateDataset = async (payload: DatasetPayload) => {
     setIsSubmitting(true)
-    setSubmitError(null)
 
     try {
       await createDataset(payload)
       setIsDialogOpen(false)
       await loadDatasets()
-    } catch (requestError) {
-      setSubmitError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Unable to create dataset',
-      )
+    } catch {
+      toast.error('Unable to create dataset')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <section className="dataset-manager">
-      <div className="dataset-panel">
-        <header className="dataset-panel-header">
-          <div>
-            <p className="panel-label">Dataset Manager</p>
-            <h2>Datasets</h2>
-          </div>
-          <div className="dataset-summary">
+    <>
+      <section className={panelClass}>
+        <header className="flex items-start justify-between gap-[18px] border-b border-slate-400/10 px-[22px] py-5 max-[720px]:grid">
+          <h2 className="mt-2 mb-0 text-[1.35rem] font-semibold tracking-normal text-[#f5f7fb]">
+            Dataset Manager
+          </h2>
+          <div className={`${summaryPillClass} max-[720px]:w-fit`}>
             {isLoading ? 'Loading' : `${datasets.length} datasets`}
           </div>
         </header>
 
         {isLoading ? (
           <DatasetState title="Loading datasets" />
-        ) : error ? (
-          <DatasetState
-            title="Datasets unavailable"
-            description={error}
-            variant="error"
-          />
         ) : datasets.length === 0 ? (
           <DatasetState
             title="No datasets found"
             description="Create a dataset in the backend to see it here."
           />
         ) : (
-          <div className="dataset-table-wrap">
-            <table className="dataset-table">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse">
               <thead>
                 <tr>
-                  <th scope="col">ID</th>
-                  <th scope="col">Name</th>
-                  <th scope="col">Description</th>
+                  <th
+                    className="border-b border-slate-400/10 bg-[#070b12]/50 px-[18px] py-4 text-left align-top text-xs font-semibold tracking-[0.12em] text-[#738099] uppercase"
+                    scope="col"
+                  >
+                    ID
+                  </th>
+                  <th
+                    className="border-b border-slate-400/10 bg-[#070b12]/50 px-[18px] py-4 text-left align-top text-xs font-semibold tracking-[0.12em] text-[#738099] uppercase"
+                    scope="col"
+                  >
+                    Name
+                  </th>
+                  <th
+                    className="border-b border-slate-400/10 bg-[#070b12]/50 px-[18px] py-4 text-left align-top text-xs font-semibold tracking-[0.12em] text-[#738099] uppercase"
+                    scope="col"
+                  >
+                    Description
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {datasets.map((dataset) => (
-                  <tr key={dataset.id}>
-                    <td className="dataset-id">{dataset.id}</td>
-                    <td className="dataset-name">{dataset.name}</td>
-                    <td className="dataset-description">
+                  <tr
+                    key={dataset.id}
+                    className="cursor-pointer outline-none transition-colors duration-150 hover:bg-slate-400/5 focus-visible:bg-slate-400/5 focus-visible:[&>td:first-child]:shadow-[inset_3px_0_0_#3dd9b3] [&:last-child>td]:border-b-0"
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Open dataset ${dataset.name}`}
+                    onClick={() => onOpenDataset(dataset)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        onOpenDataset(dataset)
+                      }
+                    }}
+                  >
+                    <td className="w-24 border-b border-slate-400/10 px-[18px] py-4 align-top text-[#738099] [font-variant-numeric:tabular-nums]">
+                      {dataset.id}
+                    </td>
+                    <td className="w-[260px] border-b border-slate-400/10 px-[18px] py-4 align-top font-semibold text-[#f5f7fb]">
+                      {dataset.name}
+                    </td>
+                    <td className="border-b border-slate-400/10 px-[18px] py-4 align-top text-[#a8b0c3]">
                       {dataset.description || 'No description'}
                     </td>
                   </tr>
@@ -104,53 +128,45 @@ export default function DatasetManager() {
           </div>
         )}
 
-        <footer className="dataset-panel-footer">
+        <footer className="flex justify-end border-t border-slate-400/10 bg-[#070b12]/35 px-[22px] py-4 max-[720px]:justify-stretch">
           <button
-            className="dataset-button"
+            className={`${primaryButtonClass} max-[720px]:w-full`}
             type="button"
-            onClick={() => {
-              setSubmitError(null)
-              setIsDialogOpen(true)
-            }}
+            onClick={() => setIsDialogOpen(true)}
           >
             Add Dataset
           </button>
         </footer>
-      </div>
+      </section>
 
       {isDialogOpen ? (
         <DatasetEditorDialog
           isSubmitting={isSubmitting}
-          error={submitError}
           onCancel={() => setIsDialogOpen(false)}
           onSubmit={handleCreateDataset}
         />
       ) : null}
-    </section>
+    </>
   )
 }
 
 type DatasetStateProps = {
   title: string
   description?: string
-  variant?: 'default' | 'error'
 }
 
 function DatasetState({
   title,
   description,
-  variant = 'default',
 }: DatasetStateProps) {
   return (
-    <div className="dataset-state">
-      <div
-        className={`dataset-state-content${
-          variant === 'error' ? ' dataset-error' : ''
-        }`}
-      >
-        <p className="panel-label">Status</p>
-        <h3>{title}</h3>
-        {description ? <p>{description}</p> : null}
+    <div className="grid min-h-[220px] place-items-center p-9 text-center text-[#a8b0c3]">
+      <div className="max-w-[460px]">
+        <p className={panelLabelClass}>Status</p>
+        <h3 className="mt-2.5 mb-2 text-[1.05rem] font-semibold tracking-normal text-current">
+          {title}
+        </h3>
+        {description ? <p className="mb-0">{description}</p> : null}
       </div>
     </div>
   )
