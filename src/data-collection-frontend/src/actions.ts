@@ -30,6 +30,17 @@ async function requestJson<T>(
   return response.json() as Promise<T>
 }
 
+async function request(
+  path: string,
+  options?: RequestInit,
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${path}`, options)
+
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`)
+  }
+}
+
 export function getDatasets() {
   return requestJson<Dataset[]>('/api/v1/datasets/')
 }
@@ -66,5 +77,14 @@ export function createDataset(payload: DatasetPayload) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
+  })
+}
+
+export function deleteDataset(datasetId: number) {
+  return request(`/api/v1/datasets/${datasetId}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: '*/*',
+    },
   })
 }

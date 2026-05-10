@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { createDataset, getDatasets } from '../actions'
+import { createDataset, deleteDataset, getDatasets } from '../actions'
 import type { Dataset, DatasetPayload } from '../actions'
+import ConfirmDeleteDialog from './ConfirmDeleteDialog'
 import DatasetEditorDialog from './DatasetEditorDialog'
 import {
   panelClass,
@@ -19,6 +20,10 @@ export default function DatasetManager({ onOpenDataset }: DatasetManagerProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [datasetPendingDelete, setDatasetPendingDelete] = useState<Dataset | null>(
+    null,
+  )
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadDatasets = useCallback(async () => {
     setIsLoading(true)
@@ -52,6 +57,24 @@ export default function DatasetManager({ onOpenDataset }: DatasetManagerProps) {
     }
   }
 
+  const handleDeleteDataset = async () => {
+    if (!datasetPendingDelete) {
+      return
+    }
+
+    setIsDeleting(true)
+
+    try {
+      await deleteDataset(datasetPendingDelete.id)
+      setDatasetPendingDelete(null)
+      await loadDatasets()
+    } catch {
+      toast.error('Unable to delete dataset')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   return (
     <>
       <section className={panelClass}>
@@ -73,7 +96,7 @@ export default function DatasetManager({ onOpenDataset }: DatasetManagerProps) {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse">
+            <table className="w-full min-w-[780px] border-collapse">
               <thead>
                 <tr>
                   <th
@@ -94,6 +117,11 @@ export default function DatasetManager({ onOpenDataset }: DatasetManagerProps) {
                   >
                     Description
                   </th>
+                  <th
+                    className="w-16 border-b border-slate-400/10 bg-[#070b12]/50 px-[18px] py-4 text-right align-top"
+                    scope="col"
+                    aria-label="Actions"
+                  />
                 </tr>
               </thead>
               <tbody>
@@ -121,6 +149,22 @@ export default function DatasetManager({ onOpenDataset }: DatasetManagerProps) {
                     <td className="border-b border-slate-400/10 px-[18px] py-4 align-top text-[#a8b0c3]">
                       {dataset.description || 'No description'}
                     </td>
+                    <td className="border-b border-slate-400/10 px-[18px] py-4 align-top text-right">
+                      <button
+                        className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[12px] border border-slate-400/15 bg-slate-400/5 text-[#738099] transition duration-150 hover:-translate-y-px hover:border-rose-400/40 hover:bg-rose-400/10 hover:text-rose-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        aria-label={`Delete dataset ${dataset.name}`}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setDatasetPendingDelete(dataset)
+                        }}
+                        onKeyDown={(event) => {
+                          event.stopPropagation()
+                        }}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -146,6 +190,28 @@ export default function DatasetManager({ onOpenDataset }: DatasetManagerProps) {
           onSubmit={handleCreateDataset}
         />
       ) : null}
+
+      {datasetPendingDelete ? (
+        <ConfirmDeleteDialog
+          sectionLabel="Deleting Dataset"
+          description={
+            <p className="m-0">
+              Delete{' '}
+              <span className="font-semibold text-[#f5f7fb]">
+                {datasetPendingDelete.name}
+              </span>
+              ?
+            </p>
+          }
+          isDeleting={isDeleting}
+          onCancel={() => {
+            if (!isDeleting) {
+              setDatasetPendingDelete(null)
+            }
+          }}
+          onDelete={handleDeleteDataset}
+        />
+      ) : null}
     </>
   )
 }
@@ -169,5 +235,26 @@ function DatasetState({
         {description ? <p className="mb-0">{description}</p> : null}
       </div>
     </div>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-[18px] w-[18px]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4.75C8 4.34 8.34 4 8.75 4h6.5c.41 0 .75.34.75.75V6" />
+      <path d="M6.75 6l.7 11.11A2 2 0 0 0 9.44 19h5.12a2 2 0 0 0 1.99-1.89L17.25 6" />
+      <path d="M10 10.25v5.5" />
+      <path d="M14 10.25v5.5" />
+    </svg>
   )
 }

@@ -39,6 +39,7 @@ Projekt do tłumaczenia języka migowego oraz zbierania i opisywania danych wide
 - Frontend ma spójny ciemny motyw i użytkowy, profesjonalny charakter.
 - Style frontendu pisz w Tailwind CSS. `src/index.css` zostaw jako globalne wejście Tailwinda i bazowe style dokumentu.
 - Wspólne klasy UI trzymaj w `src/data-collection-frontend/src/ui/classes.ts`, jeśli powtarzają się w kilku komponentach.
+- Proste błędy UI pokazuj przez `toast.error` z `sonner`; nie dodawaj lokalnego stanu błędu ani paneli błędów, jeśli wystarczy growl.
 - Nawigację frontendu opieraj o React Router; definicje ścieżek trzymaj w `src/data-collection-frontend/src/routes.ts`.
 - Typy i funkcje API frontendu trzymaj w `src/data-collection-frontend/src/actions.ts`, dopóki projekt nie potrzebuje osobnej warstwy klienta API.
 - W backendzie dodawaj endpointy w `app/api/v1/<obszar>/router.py`, CRUD w `app/crud`, logikę integracyjną w `app/services`.
