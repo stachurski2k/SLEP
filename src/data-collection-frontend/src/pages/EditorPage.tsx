@@ -60,7 +60,7 @@ function getRulerStep(zoom: number) {
   return 10
 }
 
-export default function Editor() {
+export default function EditorPage() {
   const inputId = useId()
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const timelineRef = useRef<HTMLDivElement | null>(null)

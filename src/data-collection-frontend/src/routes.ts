@@ -1,6 +1,11 @@
 import type { Dataset } from './actions'
 
-export type Page = 'editor' | 'dataset-manager' | 'video-explorer'
+export type Page =
+  | 'editor'
+  | 'dataset-manager'
+  | 'gesture-class'
+  | 'gesture-type'
+  | 'video-explorer'
 
 export type DatasetRouteState = {
   dataset?: Dataset
@@ -9,6 +14,8 @@ export type DatasetRouteState = {
 export const routes = {
   editor: '/',
   datasets: '/datasets',
+  gestureClasses: '/gesture-classes',
+  gestureTypes: '/gesture-types',
   datasetVideos: '/datasets/:datasetId/videos',
 } as const
 
@@ -20,6 +27,8 @@ export const navRoutes: Array<{
 }> = [
   { page: 'editor', label: 'Video editor', path: routes.editor, end: true },
   { page: 'dataset-manager', label: 'Dataset Manager', path: routes.datasets },
+  { page: 'gesture-class', label: 'Gesture Class', path: routes.gestureClasses },
+  { page: 'gesture-type', label: 'Gesture Types', path: routes.gestureTypes },
 ]
 
 export function getDatasetVideosPath(datasetId: number) {

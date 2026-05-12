@@ -198,7 +198,7 @@ function ExplorerState({
     </div>
   )
 }
-
+// TODO: Uploadowanie filmów na backend
 function VideoFileIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">

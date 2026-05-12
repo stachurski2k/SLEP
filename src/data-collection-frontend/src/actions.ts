@@ -17,7 +17,25 @@ export type Video = {
   filepath: string
 }
 
-async function requestJson<T>(
+export type GestureClass = {
+  id: number
+  name: string
+}
+
+export type GestureClassPayload = {
+  name: string
+}
+
+export type GestureType = {
+  id: number
+  name: string
+}
+
+export type GestureTypePayload = {
+  name: string
+}
+
+export async function requestJson<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
@@ -86,5 +104,69 @@ export function deleteDataset(datasetId: number) {
     headers: {
       Accept: '*/*',
     },
+  })
+}
+
+export function deleteGestureClass(gestureClassId: number) {
+  return request(`/api/v1/gesture-classes/${gestureClassId}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: '*/*',
+    },
+  })
+}
+
+export function createGestureClass(payload: GestureClassPayload) {
+  return requestJson<GestureClass>('/api/v1/gesture-classes/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateGestureClass(
+  gestureClassId: number,
+  payload: GestureClassPayload,
+) {
+  return requestJson<GestureClass>(`/api/v1/gesture-classes/${gestureClassId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteGestureType(gestureTypeId: number) {
+  return request(`/api/v1/gesture-types/${gestureTypeId}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: '*/*',
+    },
+  })
+}
+
+export function createGestureType(payload: GestureTypePayload) {
+  return requestJson<GestureType>('/api/v1/gesture-types/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateGestureType(
+  gestureTypeId: number,
+  payload: GestureTypePayload,
+) {
+  return requestJson<GestureType>(`/api/v1/gesture-types/${gestureTypeId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   })
 }
