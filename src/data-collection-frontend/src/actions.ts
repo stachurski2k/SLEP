@@ -17,6 +17,13 @@ export type Video = {
   filepath: string
 }
 
+export type ImportVideoJobPayload = {
+  video_name: string
+  video_filepath: string
+  video_description: string
+  dataset_id: number
+}
+
 export type GestureClass = {
   id: number
   name: string
@@ -86,6 +93,16 @@ export function getVideos({
   }
 
   return requestJson<Video[]>(`/api/v1/videos/?${params.toString()}`)
+}
+
+export function createImportVideoJob(payload: ImportVideoJobPayload) {
+  return requestJson<unknown>('/api/v1/import-video-jobs/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
 }
 
 export function createDataset(payload: DatasetPayload) {
