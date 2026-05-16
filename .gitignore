@@ -1,2 +1,5 @@
 
 /src/data-collection-backend/tmp
+*.pyc
+__pycache__
+research/loader/data/*
