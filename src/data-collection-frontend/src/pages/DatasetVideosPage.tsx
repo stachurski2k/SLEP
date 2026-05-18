@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
-import { createImportVideoJob } from '../actions'
-import type { ImportVideoJobPayload, Video } from '../actions'
+import { createImportVideoJob, getUploadUrl, uploadFileToSignedUrl } from '../actions'
+import type { ImportVideoUploadPayload, Video } from '../actions'
 import CustomTable from '../components/CustomTable'
 import type { CustomTableColumn } from '../components/CustomTable'
 import ImportVideoDialog from '../components/ImportVideoDialog'
@@ -35,6 +35,7 @@ export default function DatasetVideosPage() {
     routeState?.dataset?.id === parsedDatasetId ? routeState.dataset : null
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [tableRefreshKey, setTableRefreshKey] = useState(0)
   const [selectedVideoState, setSelectedVideoState] = useState<{
     datasetId: number
     video: Video | null
@@ -81,14 +82,28 @@ export default function DatasetVideosPage() {
   const videosUrl = `/api/v1/videos/?page=${PAGE}&limit=${LIMIT}&dataset_id=${parsedDatasetId}`
   const tableHeading = dataset?.name ?? `Dataset #${parsedDatasetId}`
 
-  const handleImportVideo = async (payload: ImportVideoJobPayload) => {
+  const handleImportVideo = async (payload: ImportVideoUploadPayload) => {
     setIsSubmitting(true)
 
     try {
-      await createImportVideoJob(payload)
+      const contentType = payload.video_file.type || 'video/mp4'
+      const uploadTarget = await getUploadUrl({
+        s3_key: buildVideoUploadKey(payload.dataset_id, payload.video_file.name),
+        content_type: contentType,
+      })
+
+      await uploadFileToSignedUrl(uploadTarget.url, payload.video_file, contentType)
+      await createImportVideoJob({
+        video_name: payload.video_name,
+        video_filepath: uploadTarget.key,
+        video_description: payload.video_description,
+        dataset_id: payload.dataset_id,
+      })
+
+      setTableRefreshKey((currentValue) => currentValue + 1)
       setIsDialogOpen(false)
     } catch {
-      toast.error('Unable to start video import')
+      toast.error('Unable to upload and import video')
     } finally {
       setIsSubmitting(false)
     }
@@ -112,6 +127,7 @@ export default function DatasetVideosPage() {
             columns={columns}
             url={videosUrl}
             getRowKey={(video) => video.id}
+            refreshKey={tableRefreshKey}
             onRowClick={(video) =>
               setSelectedVideoState({ datasetId: parsedDatasetId, video })
             }
@@ -174,4 +190,13 @@ export default function DatasetVideosPage() {
       ) : null}
     </>
   )
+}
+
+function buildVideoUploadKey(datasetId: number, filename: string) {
+  const sanitizedFilename = filename
+    .replaceAll('\\', '-')
+    .replaceAll('/', '-')
+    .replace(/\s+/g, '-')
+
+  return `videos/dataset-${datasetId}/${sanitizedFilename}`
 }

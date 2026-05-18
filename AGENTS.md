@@ -25,6 +25,7 @@ Projekt do tłumaczenia języka migowego oraz zbierania i opisywania danych wide
 - Frontend build: `cd src/data-collection-frontend; npm.cmd run build`
 - Backend testy: `cd src/data-collection-backend; uv run pytest`
 - Backend migracje: `cd src/data-collection-backend; uv run alembic upgrade head`
+- Backend rebuild: `docker compose up --build --force-recreate data-collection-api -d`
 
 ## Zasady dla agenta
 - Nie zostawiaj uruchomionych dev serverów ani kontenerów po pracy, chyba że użytkownik wyraźnie o to prosi.

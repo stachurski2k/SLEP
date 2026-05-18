@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
-import type { ImportVideoJobPayload } from '../actions'
+import { useId, useState } from 'react'
+import type { ChangeEvent, DragEvent, FormEvent } from 'react'
+import { toast } from 'sonner'
+import type { ImportVideoUploadPayload } from '../actions'
 import {
   fieldControlClass,
   fieldLabelClass,
@@ -15,7 +16,7 @@ type ImportVideoDialogProps = {
   datasetName: string
   isSubmitting: boolean
   onCancel: () => void
-  onSubmit: (payload: ImportVideoJobPayload) => Promise<void>
+  onSubmit: (payload: ImportVideoUploadPayload) => Promise<void>
 }
 
 export default function ImportVideoDialog({
@@ -25,29 +26,61 @@ export default function ImportVideoDialog({
   onCancel,
   onSubmit,
 }: ImportVideoDialogProps) {
-  const [videoName, setVideoName] = useState('')
-  const [videoFilepath, setVideoFilepath] = useState('')
+  const inputId = useId()
+  const [isDragging, setIsDragging] = useState(false)
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoTitle, setVideoTitle] = useState('')
   const [videoDescription, setVideoDescription] = useState('')
 
   const isSubmitDisabled =
-    isSubmitting ||
-    !videoName.trim() ||
-    !videoFilepath.trim() ||
-    !videoDescription.trim()
+    isSubmitting || !videoFile || !videoTitle.trim() || !videoDescription.trim()
+
+  const assignVideoFile = (file: File | null) => {
+    if (!file) {
+      setVideoFile(null)
+      return
+    }
+
+    const normalizedName = file.name.toLowerCase()
+    const isMp4File = file.type === 'video/mp4' || normalizedName.endsWith('.mp4')
+
+    if (!isMp4File) {
+      setVideoFile(null)
+      toast.error('Only MP4 videos can be imported')
+      return
+    }
+
+    setVideoFile(file)
+
+    const defaultValue = file.name.replace(/\.mp4$/i, '')
+    setVideoTitle(defaultValue)
+    setVideoDescription(defaultValue)
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (isSubmitDisabled) {
+    if (!videoFile || isSubmitDisabled) {
       return
     }
 
     await onSubmit({
-      video_name: videoName.trim(),
-      video_filepath: videoFilepath.trim(),
+      video_name: videoTitle.trim(),
+      video_file: videoFile,
       video_description: videoDescription.trim(),
       dataset_id: datasetId,
     })
+  }
+
+  const handleVideoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    assignVideoFile(event.target.files?.[0] ?? null)
+    event.target.value = ''
+  }
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault()
+    setIsDragging(false)
+    assignVideoFile(event.dataTransfer.files?.[0] ?? null)
   }
 
   return (
@@ -76,49 +109,93 @@ export default function ImportVideoDialog({
 
         <form className="grid gap-[18px] p-[22px]" onSubmit={handleSubmit}>
           <div className="grid gap-2">
-            <label className={fieldLabelClass} htmlFor="import-video-name">
-              Video name
+            <label className={fieldLabelClass} htmlFor={inputId}>
+              Video file
             </label>
-            <input
-              id="import-video-name"
-              className={fieldControlClass}
-              type="text"
-              value={videoName}
-              onChange={(event) => setVideoName(event.target.value)}
-              disabled={isSubmitting}
-              autoFocus
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <label className={fieldLabelClass} htmlFor="import-video-filepath">
-              File path
-            </label>
-            <input
-              id="import-video-filepath"
-              className={fieldControlClass}
-              type="text"
-              value={videoFilepath}
-              onChange={(event) => setVideoFilepath(event.target.value)}
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="grid gap-2">
             <label
-              className={fieldLabelClass}
-              htmlFor="import-video-description"
+              className={[
+                'grid min-h-44 cursor-pointer place-items-center rounded-[18px] border border-dashed p-6 text-center transition duration-150',
+                'bg-[linear-gradient(135deg,rgba(61,217,179,0.08),transparent_36%),linear-gradient(225deg,rgba(75,123,255,0.1),transparent_30%),rgba(7,11,18,0.86)]',
+                isDragging
+                  ? '-translate-y-px border-emerald-300/45 bg-[#0a1018]/95'
+                  : 'border-slate-400/20 hover:-translate-y-px hover:border-emerald-300/45 hover:bg-[#0a1018]/95',
+              ].join(' ')}
+              htmlFor={inputId}
+              onDragEnter={(event) => {
+                event.preventDefault()
+                setIsDragging(true)
+              }}
+              onDragOver={(event) => {
+                event.preventDefault()
+                setIsDragging(true)
+              }}
+              onDragLeave={(event) => {
+                event.preventDefault()
+                if (event.currentTarget === event.target) {
+                  setIsDragging(false)
+                }
+              }}
+              onDrop={handleDrop}
             >
-              Description
+              <input
+                id={inputId}
+                className="sr-only"
+                type="file"
+                accept=".mp4,video/mp4"
+                onChange={handleVideoFileChange}
+                disabled={isSubmitting}
+              />
+              <div className="grid gap-2">
+                <p className={panelLabelClass}>Import mp4</p>
+                <h3 className="m-0 text-[1.2rem] font-semibold tracking-normal text-[#f5f7fb]">
+                  {videoFile ? videoFile.name : 'Drop video here'}
+                </h3>
+                <p className="m-0 text-sm text-[#a8b0c3]">
+                  {videoFile
+                    ? 'Click to replace the file before starting the import.'
+                    : 'Drag and drop an MP4 file here, or click to browse.'}
+                </p>
+              </div>
             </label>
-            <textarea
-              id="import-video-description"
-              className={`${fieldControlClass} min-h-[118px] resize-y`}
-              value={videoDescription}
-              onChange={(event) => setVideoDescription(event.target.value)}
-              disabled={isSubmitting}
-            />
           </div>
+
+          {videoFile ? (
+            <>
+              <div className="grid gap-2">
+                <label
+                  className={fieldLabelClass}
+                  htmlFor="import-video-title"
+                >
+                  Title
+                </label>
+                <input
+                  id="import-video-title"
+                  className={fieldControlClass}
+                  type="text"
+                  value={videoTitle}
+                  onChange={(event) => setVideoTitle(event.target.value)}
+                  disabled={isSubmitting}
+                  autoFocus
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <label
+                  className={fieldLabelClass}
+                  htmlFor="import-video-description"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="import-video-description"
+                  className={`${fieldControlClass} min-h-[118px] resize-y`}
+                  value={videoDescription}
+                  onChange={(event) => setVideoDescription(event.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </>
+          ) : null}
 
           <div className="flex justify-end gap-2.5 max-[560px]:grid">
             <button

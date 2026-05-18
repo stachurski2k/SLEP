@@ -24,6 +24,25 @@ export type ImportVideoJobPayload = {
   dataset_id: number
 }
 
+export type ImportVideoUploadPayload = {
+  video_name: string
+  video_file: File
+  video_description: string
+  dataset_id: number
+}
+
+export type UploadUrlPayload = {
+  s3_key: string
+  content_type: string
+  expires_in?: number
+}
+
+export type UploadUrlResponse = {
+  url: string
+  key: string
+  expires_in: number
+}
+
 export type GestureClass = {
   id: number
   name: string
@@ -103,6 +122,34 @@ export function createImportVideoJob(payload: ImportVideoJobPayload) {
     },
     body: JSON.stringify(payload),
   })
+}
+
+export function getUploadUrl(payload: UploadUrlPayload) {
+  return requestJson<UploadUrlResponse>('/api/v1/s3/upload-url', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function uploadFileToSignedUrl(
+  url: string,
+  file: File,
+  contentType: string,
+) {
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': contentType,
+    },
+    body: file,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Upload failed with status ${response.status}`)
+  }
 }
 
 export function createDataset(payload: DatasetPayload) {
