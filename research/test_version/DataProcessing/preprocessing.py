@@ -11,6 +11,7 @@ RIGHT_SHOULDER = slice(1*3, 1*3+3)   # 3:6
 LEFT_WRIST     = slice(4*3, 4*3+3)   # 12:15
 RIGHT_WRIST    = slice(5*3, 5*3+3)   # 15:18
 
+
 def fill_missing_hands(sequence: np.ndarray,
                        nan_threshold=0.10) -> np.ndarray:
     result = sequence.copy()
