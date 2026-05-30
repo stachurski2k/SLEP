@@ -1,110 +1,147 @@
-# preprocessing.py
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy.signal import savgol_filter
 
-# ciało: indeksy 0-17 (6 punktów: barki, łokcie, nadgarstki)
-LEFT_SHOULDER  = slice(0*3, 0*3+3)   # 0:3
-RIGHT_SHOULDER = slice(1*3, 1*3+3)   # 3:6
+LEFT_SHOULDER  = slice(0, 3)    
+RIGHT_SHOULDER = slice(3, 6)    
+LEFT_WRIST     = slice(12, 15)  
+RIGHT_WRIST    = slice(15, 18)  
 
-# sprawdź czy barki są w kadrze (wartości MediaPipe: 0-1)
-# jeśli nie — użyj nadgarstków jako fallback
-LEFT_WRIST     = slice(4*3, 4*3+3)   # 12:15
-RIGHT_WRIST    = slice(5*3, 5*3+3)   # 15:18
+LEFT_HAND      = slice(18, 81) 
+RIGHT_HAND     = slice(81, 144) 
 
+def hands_activity(sequence: np.ndarray, threshold=0.15) -> np.ndarray:
+    seq = sequence.copy()
+    num_frames = len(seq)
+    
+    left_nan_frames = np.isnan(seq[:, LEFT_HAND]).all(axis=1)
+    right_nan_frames = np.isnan(seq[:, RIGHT_HAND]).all(axis=1)
+    
+    left_valid_ratio = 1.0 - left_nan_frames.mean()
+    right_valid_ratio = 1.0 - right_nan_frames.mean()
+    
+    # left hand
+    if left_valid_ratio < threshold:
+        for frame in range(num_frames):
+            shoulder_pos = seq[frame, LEFT_SHOULDER]
 
-def fill_missing_hands(sequence: np.ndarray,
-                       nan_threshold=0.10) -> np.ndarray:
-    result = sequence.copy()
+            if np.isnan(shoulder_pos).any():
+                shoulder_pos = np.zeros(3)
+            seq[frame, LEFT_HAND] = np.tile(shoulder_pos, 21)
+            
+    # right hand
+    if right_valid_ratio < threshold:
+        for frame in range(num_frames):
+            shoulder_pos = seq[frame, RIGHT_SHOULDER]
+            if np.isnan(shoulder_pos).any():
+                shoulder_pos = np.zeros(3)
+            seq[frame, RIGHT_HAND] = np.tile(shoulder_pos, 21)
+            
+    return seq
 
-    LEFT_WRIST_POSE  = slice(12, 15)
-    RIGHT_WRIST_POSE = slice(15, 18)
-    LEFT_HAND        = slice(18, 81)
-    RIGHT_HAND       = slice(81, 144)
-
-    left_nan_ratio  = np.isnan(sequence[:, LEFT_HAND]).any(axis=1).mean()
-    right_nan_ratio = np.isnan(sequence[:, RIGHT_HAND]).any(axis=1).mean()
-
-    for t in range(len(sequence)):
-        # lewa ręka
-        if left_nan_ratio > nan_threshold:
-            if np.isnan(sequence[t, LEFT_HAND]).all():
-                wrist = sequence[t, LEFT_WRIST_POSE]
-                if not np.isnan(wrist).any():
-                    for i in range(21):
-                        result[t, 18 + i*3 : 18 + i*3 + 3] = wrist
-
-        # prawa ręka
-        if right_nan_ratio > nan_threshold:
-            if np.isnan(sequence[t, RIGHT_HAND]).all():
-                wrist = sequence[t, RIGHT_WRIST_POSE]
-                if not np.isnan(wrist).any():
-                    for i in range(21):
-                        result[t, 81 + i*3 : 81 + i*3 + 3] = wrist
-
-    return result
-
-
-def interpolate_missing(sequence: np.ndarray) -> np.ndarray:
-    result = sequence.copy()
-    for dim in range(sequence.shape[1]):
-        col      = sequence[:, dim]
+def interpolate_position(sequence: np.ndarray) -> np.ndarray:
+    seq = sequence.copy()
+    num_frames = len(seq)
+    indices = np.arange(num_frames)
+    
+    for dim in range(seq.shape[1]):
+        col = seq[:, dim]           # single parameter of the landmark per frames
         nan_mask = np.isnan(col)
+        
         if nan_mask.all():
-            result[:, dim] = 0.0
+            seq[:, dim] = 0.0
             continue
+            
         if not nan_mask.any():
             continue
-        indices        = np.arange(len(col))
-        valid          = ~nan_mask
-        result[:, dim] = np.interp(indices, indices[valid], col[valid])
-    return result
+        
+        # get frames with values
+        valid_idx = indices[~nan_mask]
+        valid_vals = col[~nan_mask]
+        
+        seq[:, dim] = np.interp(indices, valid_idx, valid_vals, left=valid_vals[0], right=valid_vals[-1])
+        
+    return seq
 
-def remove_static_frames(sequence: np.ndarray,
-                         threshold=0.01) -> np.ndarray:
-    motion      = np.linalg.norm(np.diff(sequence, axis=0), axis=1)
-    dynamic_idx = np.where(motion > threshold)[0]
+def remove_static_frames(sequence: np.ndarray, threshold=0.01) -> np.ndarray:
+    # difference vectors of movement between frames
+    frame_differences = np.diff(sequence, axis=0)
+    # magnitude of movement difference vectors
+    motion_magnitude = np.linalg.norm(frame_differences, axis=1)
+
+    dynamic_idx = np.where(motion_magnitude > threshold)[0]
+    
     if len(dynamic_idx) < 10:
         return sequence
+        
     return sequence[dynamic_idx]
 
+def Savitzky_Golay_filter(sequence: np.ndarray, window_length=5, polyorder=2) -> np.ndarray:
+    if len(sequence) < window_length:
+        return sequence
+    
+    smoothed = savgol_filter(sequence, window_length=window_length, polyorder=polyorder, axis=0)
+    return smoothed
 
-def normalize(sequence: np.ndarray) -> np.ndarray:
+def normalization(sequence: np.ndarray) -> np.ndarray:
     normalized = sequence.copy().astype(np.float32)
-
-    left_sh  = normalized[:, LEFT_SHOULDER]   
-    right_sh = normalized[:, RIGHT_SHOULDER]  
-
-    center = (left_sh + right_sh) / 2  
-
+    
+    # translation (set center as midpoint between shoulders)
+    left_sh = normalized[:, LEFT_SHOULDER]
+    right_sh = normalized[:, RIGHT_SHOULDER]
+    center = (left_sh + right_sh) / 2.0
+    
     for i in range(0, normalized.shape[1], 3):
         normalized[:, i:i+3] -= center
-
-    shoulder_dist = np.linalg.norm(
-        normalized[:, LEFT_SHOULDER] - normalized[:, RIGHT_SHOULDER],
-        axis=1
-    ).mean() + 1e-8
-
-    normalized /= shoulder_dist
+        
+    # scale (set distance between shoulders as 1)
+    shoulder_dist = normalized[:, LEFT_SHOULDER] - normalized[:, RIGHT_SHOULDER]
+    scale_factor = np.linalg.norm(shoulder_dist, axis=1, keepdims=True) + 1e-6
+    
+    normalized /= np.repeat(scale_factor, normalized.shape[1], axis=1)
+    
     return normalized
 
+def resample_sequence(sequence: np.ndarray, target_len=60) -> np.ndarray:
+    num_frames, num_features = sequence.shape
 
-def resample(sequence: np.ndarray, target_len=60) -> np.ndarray:
-    n, dims = sequence.shape
-    if n == target_len:
+    if num_frames == target_len:
         return sequence
-    old_t = np.linspace(0, 1, n)
-    new_t = np.linspace(0, 1, target_len)
-    resampled = np.zeros((target_len, dims), dtype=np.float32)
-    for d in range(dims):
-        f = interp1d(old_t, sequence[:, d], kind="linear")
-        resampled[:, d] = f(new_t)
+
+    # Original timeline of the sequence.
+    original_timestamps = np.linspace(0, 1, num_frames)
+
+    # Target timeline after resampling.
+    target_timestamps = np.linspace(0, 1, target_len)
+
+    resampled = np.zeros((target_len, num_features), dtype=np.float32)
+
+    for feature_idx in range(num_features):
+
+        # Interpolation function for a single feature trajectory over time.
+        interpolation_fn = interp1d(original_timestamps, sequence[:, feature_idx], kind="linear")
+
+        resampled[:, feature_idx] = interpolation_fn(target_timestamps)
+
     return resampled
 
-
 def preprocess(sequence: np.ndarray, target_len=60) -> np.ndarray:
-    sequence = fill_missing_hands(sequence) 
-    sequence = interpolate_missing(sequence)
-    sequence = remove_static_frames(sequence)
-    sequence = normalize(sequence)
-    sequence = resample(sequence, target_len)
-    return sequence
+    # check which hands are used in gesture
+    seq = hands_activity(sequence)
+    
+    # interpolate values of missing landmarks
+    seq = interpolate_position(seq)
+    
+    # use dynamic frames only
+    seq = remove_static_frames(seq)
+    
+    # smooth sequence
+    seq = Savitzky_Golay_filter(seq)
+
+    # translate and scale
+    seq = normalization(seq)
+    
+    # set a fixed number of frames
+    seq = resample_sequence(seq, target_len)
+
+    return seq

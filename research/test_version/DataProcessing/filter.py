@@ -3,7 +3,7 @@ from pathlib import Path
 
 FEATURES_DIR = Path("Features")
 
-def delete_frames(sequence: np.ndarray, path):
+def trim_frames(sequence: np.ndarray, path):
     seq = sequence.copy()
 
     LEFT_HAND = slice(18,81)
@@ -12,8 +12,18 @@ def delete_frames(sequence: np.ndarray, path):
     left_nan = np.isnan(seq[:,LEFT_HAND]).any(axis=1)
     right_nan = np.isnan(seq[:,RIGHT_HAND]).any(axis=1)
     both_nan = left_nan & right_nan
+    
+    has_hand = ~both_nan 
 
-    seq_filtered = seq[~both_nan]
+    if not np.any(has_hand):
+        seq_filtered = seq[0:0] 
+    else:
+        valid_indices = np.where(has_hand)[0]
+
+        start_idx = valid_indices[0]
+        end_idx = valid_indices[-1]
+        
+        seq_filtered = seq[start_idx:end_idx+1]
 
     print(f"Before: {seq.shape}     --->    After: {seq_filtered.shape}     {path}")
     np.save(path, seq_filtered)
@@ -27,7 +37,7 @@ def frame_filter():
 
             for path in files:
                 seq = np.load(path)
-                seq_filtred = delete_frames(seq, path)
+                seq_filtred = trim_frames(seq, path)
 
 if __name__ == "__main__":
     frame_filter()

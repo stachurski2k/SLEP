@@ -1,41 +1,59 @@
+from mediapipe.python.solutions import selfie_segmentation
 import random
-import numpy as np
 from torch.utils.data import Sampler
 
 
 class BalancedBatchSampler(Sampler):
-    """
-    Każdy batch zawiera P klas × K przykładów = B próbek.
-    
-    Dla 32 gestów: P=8 klas, K=4 przykłady → batch=32
-    
-    WAŻNE: P musi być <= liczba klas, K <= min nagrań na gest
-    """
-    def __init__(self, labels, P=8, K=4):
-        self.P = P  # klas per batch
-        self.K = K  # przykładów per klasa
 
-        # grupuj indeksy po klasie
-        self.by_label = {}
+    def __init__(self, labels, P=4, K=8, num_batches=None):
+
+        self.P = P  # number of classes per batch
+        self.K = K  # number of samples per class
+
+        # group index by classes
+        self.class_to_indices = {}
+
         for idx, label in enumerate(labels):
-            if label not in self.by_label:
-                self.by_label[label] = []
-            self.by_label[label].append(idx)
 
-        self.all_labels = list(self.by_label.keys())
-        # ile batchów na epokę
-        self.n_batches  = len(labels) // (P * K)
+            if label not in self.class_to_indices:
+                self.class_to_indices[label] = []
+
+            self.class_to_indices[label].append(idx)
+
+        # list of all classes
+        self.classes = list(self.class_to_indices.keys())
+
+        # number of baches per epoch
+        total_samples = len(labels)
+        batch_size = P * K
+        
+        if num_batches is not None:
+            self.num_batches = num_batches
+        else:
+            self.num_batches = max(1, total_samples // batch_size)
 
     def __iter__(self):
-        for _ in range(self.n_batches):
-            batch = []
-            # losuj P różnych klas
-            chosen_labels = random.sample(self.all_labels, self.P)
-            for label in chosen_labels:
-                # losuj K przykładów z każdej klasy
-                indices = random.choices(self.by_label[label], k=self.K)
-                batch.extend(indices)
-            yield batch
+
+        for _ in range(self.num_batches):
+
+            batch_indices = []
+
+            # P classes per batch
+            chosen_classes = random.sample(self.classes, self.P)
+
+            # K samples from each class
+            for cls in chosen_classes:
+
+                available_indices = self.class_to_indices[cls]
+
+                if len(available_indices) >= self.K:
+                    chosen_indices = random.sample(available_indices, k=self.K)
+                else:
+                    chosen_indices = random.choices(available_indices, k=self.K)
+
+                batch_indices.extend(chosen_indices)
+
+            yield batch_indices
 
     def __len__(self):
-        return self.n_batches
+        return self.num_batches
