@@ -1,13 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
-import { createImportVideoJob, getUploadUrl, uploadFileToSignedUrl } from '../actions'
+import {
+  createImportVideoJob,
+  getDownloadUrl,
+  getUploadUrl,
+  uploadFileToSignedUrl,
+} from '../actions'
 import type { ImportVideoUploadPayload, Video } from '../actions'
-import CustomTable from '../components/CustomTable'
-import type { CustomTableColumn } from '../components/CustomTable'
 import ImportVideoDialog from '../components/ImportVideoDialog'
+import VideoTable from '../components/VideoTable'
 import { routes } from '../routes'
-import type { DatasetRouteState } from '../routes'
+import type { DatasetRouteState, EditorRouteState } from '../routes'
 import {
   fieldLabelClass,
   panelClass,
@@ -16,14 +20,12 @@ import {
   secondaryButtonClass,
 } from '../ui/classes'
 
-const PAGE = 0
-const LIMIT = 50
-const detailPanelClass = 'border-t border-slate-400/10 bg-[#070b12]/20 p-[18px]'
+const detailPanelClass =
+  'border-t border-slate-400/10 bg-[#070b12]/20 p-[18px] lg:border-t-0 lg:border-l'
 const detailTitleClass =
   'mt-2.5 mb-[18px] text-[1.05rem] font-semibold tracking-normal text-[#f5f7fb] [overflow-wrap:anywhere]'
 const detailValueClass =
   'mt-1 mb-0 text-[#a8b0c3] [overflow-wrap:anywhere]'
-const truncatedTextClass = 'overflow-hidden text-ellipsis whitespace-nowrap'
 
 export default function DatasetVideosPage() {
   const navigate = useNavigate()
@@ -43,35 +45,52 @@ export default function DatasetVideosPage() {
     datasetId: parsedDatasetId,
     video: null,
   })
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const selectedVideo =
     selectedVideoState.datasetId === parsedDatasetId
       ? selectedVideoState.video
       : null
 
-  const columns = useMemo<CustomTableColumn<Video>[]>(
-    () => [
-      {
-        id: 'id',
-        header: 'ID',
-        className:
-          'w-24 text-[#738099] [font-variant-numeric:tabular-nums]',
-        render: (video) => video.id,
-      },
-      {
-        id: 'name',
-        header: 'Name',
-        className: 'w-[260px] font-semibold text-[#f5f7fb]',
-        render: (video) => <span className={truncatedTextClass}>{video.name}</span>,
-      },
-      {
-        id: 'filepath',
-        header: 'Path',
-        className: 'text-[#738099]',
-        render: (video) => video.filepath,
-      },
-    ],
-    [],
-  )
+  useEffect(() => {
+    if (!selectedVideo) {
+      setPreviewUrl(null)
+      setIsPreviewLoading(false)
+      return
+    }
+
+    let isCancelled = false
+
+    setPreviewUrl(null)
+    setIsPreviewLoading(true)
+
+    void getDownloadUrl({ s3_key: selectedVideo.filepath })
+      .then((response) => {
+        if (isCancelled) {
+          return
+        }
+
+        setPreviewUrl(response.url)
+      })
+      .catch(() => {
+        if (isCancelled) {
+          return
+        }
+
+        toast.error('Unable to load video preview')
+      })
+      .finally(() => {
+        if (isCancelled) {
+          return
+        }
+
+        setIsPreviewLoading(false)
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [selectedVideo])
 
   if (!Number.isInteger(parsedDatasetId)) {
     toast.error('Invalid dataset ID')
@@ -79,7 +98,6 @@ export default function DatasetVideosPage() {
     return null
   }
 
-  const videosUrl = `/api/v1/videos/?page=${PAGE}&limit=${LIMIT}&dataset_id=${parsedDatasetId}`
   const tableHeading = dataset?.name ?? `Dataset #${parsedDatasetId}`
 
   const handleImportVideo = async (payload: ImportVideoUploadPayload) => {
@@ -117,29 +135,60 @@ export default function DatasetVideosPage() {
     setIsDialogOpen(false)
   }
 
+  const handleOpenInEditor = (video?: Video) => {
+    const editorState: EditorRouteState = {
+      dataset: dataset ?? {
+        id: parsedDatasetId,
+        name: tableHeading,
+        description: '',
+      },
+      video,
+    }
+
+    navigate(routes.editor, {
+      state: editorState,
+    })
+  }
+
   return (
     <>
       <section className="grid gap-[18px]">
-        <div className={panelClass}>
-          <CustomTable<Video>
-            label="videos"
-            heading={tableHeading}
-            columns={columns}
-            url={videosUrl}
-            getRowKey={(video) => video.id}
-            refreshKey={tableRefreshKey}
-            onRowClick={(video) =>
-              setSelectedVideoState({ datasetId: parsedDatasetId, video })
-            }
-            rowAriaLabel={(video) => `Select video ${video.name}`}
-            selectedRowKey={selectedVideo?.id ?? null}
-            emptyDescription="This dataset does not contain videos on page 0."
-          />
+        <div
+          className={`${panelClass} lg:grid lg:grid-cols-[minmax(0,1fr)_30%] lg:items-start`}
+        >
+          <div className="min-w-0">
+            <VideoTable
+              datasetId={parsedDatasetId}
+              heading={tableHeading}
+              refreshKey={tableRefreshKey}
+              onVideoClick={(video) =>
+                setSelectedVideoState({ datasetId: parsedDatasetId, video })
+              }
+              selectedVideoId={selectedVideo?.id ?? null}
+            />
+          </div>
 
           <aside className={detailPanelClass} aria-label="Selected video details">
             <p className={panelLabelClass}>Details</p>
             {selectedVideo ? (
               <>
+                <div className="mt-2.5 mx-auto w-full max-w-[100%] overflow-hidden rounded-[18px] border border-slate-200/10 bg-[#02050b]">
+                  {previewUrl ? (
+                    <video
+                      key={previewUrl}
+                      className="block aspect-video w-full bg-black"
+                      controls
+                      preload="metadata"
+                      src={previewUrl}
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  ) : (
+                    <div className="flex aspect-video items-center justify-center px-4 text-center text-sm text-[#738099]">
+                      {isPreviewLoading ? 'Loading video preview...' : 'Video preview unavailable.'}
+                    </div>
+                  )}
+                </div>
                 <h3 className={detailTitleClass}>{selectedVideo.name}</h3>
                 <dl className="m-0 grid gap-3.5">
                   <div>
@@ -155,6 +204,15 @@ export default function DatasetVideosPage() {
                     <dd className={detailValueClass}>{tableHeading}</dd>
                   </div>
                 </dl>
+                <div className="mt-5 flex justify-end">
+                  <button
+                    className={primaryButtonClass}
+                    type="button"
+                    onClick={() => handleOpenInEditor(selectedVideo)}
+                  >
+                    Open in Editor
+                  </button>
+                </div>
               </>
             ) : (
               <p className="text-[#a8b0c3]">Select a video to inspect it.</p>
@@ -168,6 +226,13 @@ export default function DatasetVideosPage() {
             onClick={() => navigate(routes.datasets)}
           >
             Back to Datasets
+          </button>
+          <button
+            className={`${secondaryButtonClass} max-[720px]:w-full`}
+            type="button"
+            onClick={() => handleOpenInEditor()}
+          >
+            Open Dataset in Editor
           </button>
           <button
             className={`${primaryButtonClass} max-[720px]:w-full`}

@@ -4,11 +4,8 @@ import { toast } from 'sonner'
 import { createDataset, deleteDataset } from '../actions'
 import type { Dataset, DatasetPayload } from '../actions'
 import ConfirmDeleteDialog from '../components/ConfirmDeleteDialog'
-import CustomTable from '../components/CustomTable'
-import type {
-  CustomTableAction,
-  CustomTableColumn,
-} from '../components/CustomTable'
+import type { CustomTableAction } from '../components/CustomTable'
+import DatasetTable from '../components/DatasetTable'
 import DatasetEditorDialog from '../components/DatasetEditorDialog'
 import TrashIcon from '../components/icons/TrashIcon'
 import { getDatasetVideosPath } from '../routes'
@@ -30,31 +27,6 @@ export default function DatasetsPage() {
       state: { dataset } satisfies DatasetRouteState,
     })
   }
-
-  const columns = useMemo<CustomTableColumn<Dataset>[]>(
-    () => [
-      {
-        id: 'id',
-        header: 'ID',
-        className:
-          'w-24 text-[#738099] [font-variant-numeric:tabular-nums]',
-        render: (dataset) => dataset.id,
-      },
-      {
-        id: 'name',
-        header: 'Name',
-        className: 'w-[260px] font-semibold text-[#f5f7fb]',
-        render: (dataset) => dataset.name,
-      },
-      {
-        id: 'description',
-        header: 'Description',
-        className: 'text-[#a8b0c3]',
-        render: (dataset) => dataset.description || 'No description',
-      },
-    ],
-    [],
-  )
 
   const actions = useMemo<CustomTableAction<Dataset>[]>(
     () => [
@@ -106,16 +78,10 @@ export default function DatasetsPage() {
   return (
     <>
       <section className={panelClass}>
-        <CustomTable<Dataset>
-          label="datasets"
-          columns={columns}
+        <DatasetTable
           actions={actions}
-          url="/api/v1/datasets/"
-          getRowKey={(dataset) => dataset.id}
-          onRowClick={handleOpenDataset}
-          rowAriaLabel={(dataset) => `Open dataset ${dataset.name}`}
           refreshKey={tableRefreshKey}
-          emptyDescription="Create a dataset in the backend to see it here."
+          onDatasetClick={handleOpenDataset}
         />
 
         <footer className="flex justify-end border-t border-slate-400/10 bg-[#070b12]/35 px-[22px] py-4 max-[720px]:justify-stretch">
