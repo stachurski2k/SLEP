@@ -1,77 +1,108 @@
+from DataProcessing import augmentation
 import os
 import random
 import numpy as np
 import torch
 import torch.nn.functional as F
-from pytorch_metric_learning import losses, miners
+from pytorch_metric_learning import losses
 from torch.utils.data import DataLoader
+from torch.optim.swa_utils import AveragedModel
 from DataProcessing.data_split import GestureDataset, build_splits
 from DataProcessing.augmentation import SequenceAugmentor
 from TrainModel.balanced_sampler import BalancedBatchSampler
-from TrainModel.emb_quality import print_embedding_distances
+from TrainModel.emb_quality import embedding_distances
 from LSTM.LSTM_encoder import LSTMEncoder
-from TrainModel.train_utils import save_reference_embeddings, evaluate_knn, EarlyStopping
+from TrainModel.train_utils import (
+    EarlyStopping,
+    atomic_np_savez,
+    atomic_torch_save,
+    evaluate_knn,
+    save_reference_embeddings,
+)
 
 # ── PATHS ────────────────────────────────────────────────────────────────
 LANDMARKS_DIR           = "Features"
-CHECKPOINT              = "LSTM/Checkpoints/best_encoder.pt"
-REFERENCE               = "LSTM/Checkpoints/reference_embeddings.npz"
+ARTIFACT_DIR            = os.path.join("LSTM", "Checkpoints")
+CHECKPOINT              = os.path.join(ARTIFACT_DIR, "best_encoder.pt")
+REFERENCE               = os.path.join(ARTIFACT_DIR, "reference_embeddings.npz")
+TRAINING_LOGS           = os.path.join(ARTIFACT_DIR, "training_logs.npz")
 
 # ── MODEL ────────────────────────────────────────────────────────────────
 MODEL                   = LSTMEncoder
-INPUT_DIM               = 144    
+INPUT_DIM               = 144
 HIDDEN_DIM              = 128
 NUM_LAYERS              = 2
-DROPOUT                 = 0.3
+DROPOUT                 = 0.4
 TARGET_LEN              = 60
 
+# ── TRAINING ─────────────────────────────────────────────────────────────
+EPOCHS                  = 300
+VAL_RATIO               = 0.3
+SEED                    = 42
+NORMALIZE_EMBEDDINGS    = True
+
+# ── LOSS ───────────────────────────────────────────────────────────────── 
+MS_ALPHA                = 2.0
+MS_BETA                 = 40.0
+MS_BASE                 = 0.5
+
 # ── SAMPLER ──────────────────────────────────────────────────────────────
-P_TRAIN                 = 8         # number of classes per batch
-K_TRAIN                 = 4         # number of samples per class
-P_VAL                   = 8
+P_TRAIN                 = 16
+K_TRAIN                 = 4
+P_VAL                   = 16
 K_VAL                   = 4
 
-# ── SCHEDULER ─────────────────────────────────────────────────────────────
+# ── SCHEDULER ────────────────────────────────────────────────────────────
 LEARNING_RATE           = 5e-4
 MIN_LR                  = 1e-5
 PATIENCE                = 20
 FACTOR                  = 0.7
 
+# ── EMA ──────────────────────────────────────────────────────────────────
+EMA_DECAY               = 0.99
+EMA_START_EPOCH         = 30
+
 # ── EARLY STOPPING ───────────────────────────────────────────────────────
-EARLY_STOP_PATIENCE     = 20
+EARLY_STOP_PATIENCE     = 30
 EARLY_STOP_DELTA        = 0.005
 
-# ── TRAINING ─────────────────────────────────────────────────────────────
-EPOCHS                  = 120
-MARGIN                  = 0.7
-VAL_RATIO               = 0.2
-SEED                    = 42
-NORMALIZE_EMBEDDINGS    = True
-MAX_BATCHES             = 5
-
 # ── AUGMENTATION ─────────────────────────────────────────────────────────
-AUG_NOISE_STD           = 0.02   # Gaussian noise on landmarks
-AUG_STRETCH_RANGE       = (0.85, 1.15)  # temporal stretch factor
-AUG_WARP_PROB           = 0.5    # probability of applying time warp
-AUG_WARP_STD            = 0.08   # strength of time warp
-AUG_SCALE_RANGE         = (0.90, 1.10)  # random scale of gesture size
-AUG_MIRROR_PROB         = 0.5    # probability of horizontal mirror
-AUG_DROPOUT_PROB        = 0.05   # probability of zeroing a landmark
+AUG_NOISE_STD           = 0.02
+AUG_STRETCH_RANGE       = (0.85, 1.15)
+AUG_WARP_PROB           = 0.5
+AUG_WARP_STD            = 0.08
+AUG_SCALE_RANGE         = (0.90, 1.10)
+AUG_MIRROR_PROB         = 0.5
+AUG_DROPOUT_PROB        = 0.05
+
+
+def export_model_state(eval_model):
+    if isinstance(eval_model, AveragedModel):
+        return eval_model.module.state_dict(), "ema"
+    return eval_model.state_dict(), "raw"
+
+
+def format_dists(dists):
+    return (
+        f"d_pos={dists['d_pos']:.4f} | "
+        f"d_neg={dists['d_neg']:.4f} | "
+        f"diff={dists['diff']:.4f}"
+    )
+
 
 def training():
     np.random.seed(SEED)
     random.seed(SEED)
     torch.manual_seed(SEED)
-    
+
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    os.makedirs(os.path.dirname(CHECKPOINT), exist_ok=True)
-    os.makedirs(os.path.dirname(REFERENCE), exist_ok=True)
+    os.makedirs(ARTIFACT_DIR, exist_ok=True)
 
-    # ── DATA ─────────────────────────────────────────────────────────────────
-    train_paths, val_paths, label_map = build_splits(LANDMARKS_DIR,
-                                                    val_ratio = VAL_RATIO, 
-                                                    seed = SEED )
+    # ── DATA ─────────────────────────────────────────────────────────────
+    train_paths, val_paths, label_map = build_splits(
+        LANDMARKS_DIR, val_ratio=VAL_RATIO, seed=SEED
+    )
 
     augmentor = SequenceAugmentor(
         noise_std     = AUG_NOISE_STD,
@@ -83,169 +114,161 @@ def training():
         dropout_prob  = AUG_DROPOUT_PROB,
     )
 
-    train_ds = GestureDataset(train_paths, label_map)  # kiedyś tu będzie augmentor=augmentor
-    val_ds = GestureDataset(val_paths,   label_map)                       
-    train_eval_ds = GestureDataset(train_paths, label_map)                       
+    train_ds      = GestureDataset(train_paths, label_map, augmentor=augmentor)
+    val_ds        = GestureDataset(val_paths, label_map)
+    train_eval_ds = GestureDataset(train_paths, label_map)
 
     train_sampler = BalancedBatchSampler(train_ds.labels, P=P_TRAIN, K=K_TRAIN)
-    
+    val_sampler   = BalancedBatchSampler(val_ds.labels,   P=P_VAL,   K=K_VAL)
+
     train_loader = DataLoader(
-        dataset = train_ds,
-        batch_sampler = train_sampler,
-        num_workers = 0,
-        pin_memory = True
+        train_ds, batch_sampler=train_sampler, num_workers=0, pin_memory=True
     )
-
-    val_sampler = BalancedBatchSampler(val_ds.labels, P=P_VAL, K=K_VAL, num_batches= 4)
-
     val_loader = DataLoader(
-        dataset = val_ds,
-        batch_sampler = val_sampler,
-        num_workers = 0,
-        pin_memory = True
+        val_ds, batch_sampler=val_sampler, num_workers=0, pin_memory=True
     )
-
     train_eval_loader = DataLoader(
-        dataset=train_eval_ds,
-        batch_size=64,
-        shuffle=False,
-        num_workers=0,
-        pin_memory=True
+        train_eval_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=True
     )
-
     val_eval_loader = DataLoader(
-        dataset=val_ds,
-        batch_size=64,
-        shuffle=False,
-        num_workers=0,
-        pin_memory=True
+        val_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=True
     )
 
-    # ── MODEL ──────────────────────────────────────────────────────────────
-    model = MODEL(INPUT_DIM, HIDDEN_DIM, NUM_LAYERS, DROPOUT).to(DEVICE)
-    criterion = losses.TripletMarginLoss(margin = MARGIN)
-    miner = miners.TripletMarginMiner( margin = MARGIN, type_of_triplets= "semihard")
-    optimizer = torch.optim.Adam(model.parameters(), lr = LEARNING_RATE)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, patience= PATIENCE, factor= FACTOR, min_lr = MIN_LR
+    # ── MODEL ─────────────────────────────────────────────────────────────
+    model     = MODEL(INPUT_DIM, HIDDEN_DIM, NUM_LAYERS, DROPOUT).to(DEVICE)
+    criterion = losses.MultiSimilarityLoss(alpha=MS_ALPHA, beta=MS_BETA, base=MS_BASE)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    ema_model = AveragedModel(
+        model, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(EMA_DECAY)
     )
-
-    print("-" * 60)
-    print(f"Model: LSTM      input= {INPUT_DIM}      hidden= {HIDDEN_DIM}   "
-          f"layers= {NUM_LAYERS}    dropout= {DROPOUT}    device= {DEVICE}")
-    print(f"Training: epochs= {EPOCHS}    lr= {LEARNING_RATE}    margin= {MARGIN}")
-    print(f"Batch Train: P= {P_TRAIN} classes x K= {K_TRAIN} examples = {P_TRAIN*K_TRAIN} samples")
-    print(f"Batch Val:   P= {P_VAL} classes x K= {K_VAL} examples = {P_VAL*K_VAL} samples")
-    print("-" * 60)
-
-    best_val_accuracy = 0.0
-    best_val_loss = float("inf")
-    best_epoch = 0
-    best_train_dists = []
-    best_val_dists = []
-
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        optimizer, T_0=30, T_mult=2, eta_min=1e-6
+    )
     early_stopping = EarlyStopping(patience=EARLY_STOP_PATIENCE, min_delta=EARLY_STOP_DELTA)
 
-    for epoch in range( 1, EPOCHS+1):
+    print("-" * 90)
+    print(f"Model: LSTM      input= {INPUT_DIM}      hidden= {HIDDEN_DIM}   "
+          f"layers= {NUM_LAYERS}   dropout= {DROPOUT}    device= {DEVICE}")
+    print(f"Training: epochs= {EPOCHS}    lr= {LEARNING_RATE}    "
+          f"MultiSimilarityLoss: alpha= {MS_ALPHA} beta= {MS_BETA} base= {MS_BASE}")
+    print(f"Batch Train: P = {P_TRAIN} classes x K = {K_TRAIN} = {P_TRAIN*K_TRAIN} samples")
+    print(f"Batch Val:   P = {P_VAL} classes x K = {K_VAL} = {P_VAL*K_VAL} samples")
+    print("-" * 90)
 
-        # ── TRAINING LOOP ─────────────────────────────────────────────────────
+    # ── LOGS VARIABLES ─────────────────────────────────────────────
+    best_val_accuracy  = 0.0
+    best_val_loss      = float("inf")
+    best_epoch         = 0
+    train_loss_history = []
+    val_loss_history   = []
+    val_acc_history    = []
+    train_dists_history = []
+    val_dists_history = []
+    best_train_dists = {"d_pos": float("nan"), "d_neg": float("nan"), "diff": float("nan")}
+    best_val_dists = {"d_pos": float("nan"), "d_neg": float("nan"), "diff": float("nan")}
+    best_prediction_history = []
+    best_labels_history = []
+    lr_history = []
+
+    best_prediction = np.array([], dtype=np.int64)
+    best_labels = np.array([], dtype=np.int64)
+
+    for epoch in range(1, EPOCHS + 1):
+
+        # ── TRAINING LOOP ─────────────────────────────────────────────────
         model.train()
-        total_train_loss = 0.0
+        train_loss    = 0.0
         train_batches = 0
 
         for seq, labels in train_loader:
-            seq = seq.to(DEVICE)
+            seq    = seq.to(DEVICE)
             labels = labels.to(DEVICE)
 
-            _, last_state = model(seq)              # forward pass
+            _, last_state = model(seq)
+            last_state    = F.normalize(last_state, p=2, dim=1)
+            loss          = criterion(last_state, labels)
 
-            last_state = F.normalize(last_state, p=2, dim=1) # normalize embeddings
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
 
-            triplets = miner(last_state, labels)    # select triplets
+            if epoch >= EMA_START_EPOCH:
+                ema_model.update_parameters(model)
 
-            if len(triplets[0]) == 0:
-                continue
-
-            train_loss = criterion(last_state, labels, triplets)  # loss calculation
-
-            optimizer.zero_grad()                   # zero the gradients
-            train_loss.backward()                   # backward
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) # gradient clipping
-            optimizer.step()                        # update weights
-
-            total_train_loss += train_loss.item()
+            train_loss    += loss.item()
             train_batches += 1
 
-        total_train_loss /= max(train_batches, 1)
+        train_loss /= max(train_batches, 1)
 
-        # ── VALIDATION LOOP ──────────────────────────────────────────────────
-        model.eval()
-        total_val_loss = 0.0
+        # ── VALIDATION LOOP ───────────────────────────────────────────────
+        current_eval_model = ema_model if epoch >= EMA_START_EPOCH else model
+        current_eval_model.eval()
+
+        val_loss    = 0.0
         val_batches = 0
 
         with torch.no_grad():
             for seq, labels in val_loader:
-                seq = seq.to(DEVICE)
+                seq    = seq.to(DEVICE)
                 labels = labels.to(DEVICE)
 
-                seq_emb, last_state = model(seq)
+                _, last_state = current_eval_model(seq)
                 last_state = F.normalize(last_state, p=2, dim=1)
+                loss = criterion(last_state, labels)
 
-                triplets = miner(last_state, labels)
-
-                if len(triplets[0]) == 0:
-                    continue
-
-                val_loss = criterion(last_state, labels, triplets)
-                total_val_loss += val_loss.item()
+                val_loss += loss.item()
                 val_batches += 1
-        
-        total_val_loss /= max(val_batches, 1)
-        scheduler.step(total_val_loss)
 
-        # ── EVALUATION ─────────────────────────────────────────────────────
-        val_accuracy = evaluate_knn(
-            model,
-            train_eval_loader,
-            val_eval_loader,
-            DEVICE,
-            normalize=NORMALIZE_EMBEDDINGS
+        val_loss /= max(val_batches, 1)
+
+        # ── KNN EVALUATION ────────────────────────────────────────────────
+        val_accuracy, val_labels, val_prediction = evaluate_knn(
+            current_eval_model, train_eval_loader, val_eval_loader,
+            DEVICE, normalize=NORMALIZE_EMBEDDINGS
         )
+
+        scheduler.step()
+        lr = optimizer.param_groups[0]["lr"]
+        lr_history.append(lr)
+
         is_best = (
-            val_accuracy > best_val_accuracy
-            or (val_accuracy == best_val_accuracy and total_val_loss < best_val_loss)
+            val_accuracy > best_val_accuracy or
+            (val_accuracy == best_val_accuracy and val_loss < best_val_loss)
         )
 
-        # ── DISTANCE CHECK ──────────────────────────────────────────────────
-        if epoch % 10 == 0 and not is_best:
-            print(f"\n[Epoch {epoch}] distances in train batch:")
-            train_dists = print_embedding_distances(model, train_loader, DEVICE, n_batches=MAX_BATCHES)
-            print(f"\n[Epoch {epoch}] distances in val batch:")
-            val_dists = print_embedding_distances(model, val_loader, DEVICE, n_batches=MAX_BATCHES)
-            print()
+        train_loss_history.append(train_loss)
+        val_loss_history.append(val_loss)
+        val_acc_history.append(val_accuracy)
+        best_prediction_history.append(val_prediction)
+        best_labels_history.append(val_labels)
+        
 
-        # ── SAVE BEST MODEL ──────────────────────────────────────────────────
+        # ── SAVE BEST MODEL ───────────────────────────────────────────────
         saved = ""
 
         if is_best:
             best_val_accuracy = val_accuracy
-            best_val_loss = total_val_loss
+            best_val_loss = val_loss
             best_epoch = epoch
+            best_labels = val_labels.copy()
+            best_prediction = val_prediction.copy()
+            model_state, model_state_source = export_model_state(current_eval_model)
 
             checkpoint = {
                 "epoch": epoch,
-                "model_state": model.state_dict(),
+                "model_state": model_state,
+                "model_state_source": model_state_source,
+                "raw_model_state": model.state_dict(),
+                "ema_model_state": ema_model.state_dict(),
                 "optimizer_state": optimizer.state_dict(),
-                "scheduler_state": scheduler.state_dict() if scheduler else None,
-
-                "train_loss": total_train_loss,
-                "val_loss": total_val_loss,
+                "scheduler_state": scheduler.state_dict(),
+                "train_loss": train_loss,
+                "val_loss": val_loss,
                 "best_val_accuracy": best_val_accuracy,
                 "best_val_loss": best_val_loss,
-
                 "label_map": label_map,
                 "reference_path": REFERENCE,
-
                 "config": {
                     "input_dim": INPUT_DIM,
                     "hidden_dim": HIDDEN_DIM,
@@ -253,10 +276,10 @@ def training():
                     "dropout": DROPOUT,
                     "target_len": TARGET_LEN,
                     "normalize_embeddings": NORMALIZE_EMBEDDINGS,
-                    "loss": "TripletMarginLoss",
-                    "miner": "TripletMarginMiner",
-                    "miner_type": "semihard",
-                    "margin": MARGIN,
+                    "loss": "MultiSimilarityLoss",
+                    "alpha": MS_ALPHA,
+                    "beta": MS_BETA,
+                    "base": MS_BASE,
                     "p_train": P_TRAIN,
                     "k_train": K_TRAIN,
                     "p_val": P_VAL,
@@ -265,51 +288,80 @@ def training():
                 },
             }
 
-            torch.save(checkpoint, CHECKPOINT)
+            atomic_torch_save(checkpoint, CHECKPOINT)
             save_reference_embeddings(
-                model,
-                train_ds,
-                train_paths,
-                label_map,
-                DEVICE,
-                REFERENCE,
-                normalize=NORMALIZE_EMBEDDINGS
+                current_eval_model, train_eval_ds, train_paths,
+                label_map, DEVICE, REFERENCE, normalize=NORMALIZE_EMBEDDINGS
             )
+            saved = "  <- best"
 
-            saved = "  <- zapisano"
-            print(f"\n[Epoch {epoch}] distances in train batch (best):")
-            best_train_dists = print_embedding_distances(model, train_loader, DEVICE, n_batches=MAX_BATCHES)
-            
-            print(f"\n[Epoch {epoch}] distances in val batch (best):")
-            best_val_dists = print_embedding_distances(model, val_loader, DEVICE, n_batches=MAX_BATCHES)
-            print()
+        # ── EMBEDDING DISTANCES  ─────────────────────────────────────────────
+        with torch.no_grad():
+            train_dists = embedding_distances(current_eval_model, train_eval_loader, DEVICE)
+            val_dists   = embedding_distances(current_eval_model, val_eval_loader,   DEVICE)
+
+            train_dists_history.append([train_dists["d_pos"], train_dists["d_neg"], train_dists["diff"]])
+            val_dists_history.append([val_dists["d_pos"], val_dists["d_neg"], val_dists["diff"]])
+
+        if is_best:
+            best_train_dists = train_dists.copy()
+            best_val_dists   = val_dists.copy()
+
+        
+        # ── SAVE LOGS ───────────────────────────────────────────────────
+        atomic_np_savez(
+            TRAINING_LOGS,
+            epochs = np.arange(1, len(train_loss_history) + 1),
+            train_loss = np.array(train_loss_history, dtype=np.float32),
+            val_loss = np.array(val_loss_history, dtype=np.float32),
+            val_acc = np.array(val_acc_history, dtype=np.float32),
+            lr = np.array(lr_history, dtype=np.float32),
+            train_dists = np.array(train_dists_history, dtype=np.float32),
+            val_dists = np.array(val_dists_history, dtype=np.float32),
+            best_train_dists = np.array([
+                best_train_dists["d_pos"],
+                best_train_dists["d_neg"],
+                best_train_dists["diff"],
+            ], dtype=np.float32),
+            best_val_dists = np.array([
+                best_val_dists["d_pos"],
+                best_val_dists["d_neg"],
+                best_val_dists["diff"],
+            ], dtype=np.float32),
+            best_epoch = np.array(best_epoch, dtype=np.int32),
+            best_val_loss = np.array(best_val_loss, dtype=np.float32),
+            best_val_accuracy = np.array(best_val_accuracy, dtype=np.float32),
+            best_prediction = np.array(best_prediction),
+            best_labels = np.array(best_labels),
+        )
 
         print(
             f"Epoch {epoch:3d} | "
-            f"train: {total_train_loss:.4f} | "
-            f"val: {total_val_loss:.4f} | "
+            f"train: {train_loss:.4f} | "
+            f"val: {val_loss:.4f} | "
+            f"lr: {lr:.2e} | "
             f"val_acc: {val_accuracy:.2%}"
             f"{saved}"
         )
+
         if early_stopping.step(val_accuracy, is_best=is_best):
-            print(f"Early stopping at epoch {epoch} | best acc: {early_stopping.best_acc:.2f}%")
-            break 
+            print(f"\n" + "-" * 90)
+            print(f"Early stopping at epoch {epoch}")
+            print("-" * 90 + "\n")
+            break
 
-
-    print("\n" + "-" * 60)
+    print("\n" + "-" * 90)
     print("Training completed")
-    print(f"Best epoch: {best_epoch}")
-    print(f"Best val loss: {best_val_loss:.4f}")
-    print(f"Best val accuracy: {best_val_accuracy:.2%}")
-    print("\nBest train distances:")
-    for batch_idx, d_pos, d_neg, diff in best_train_dists:
-        print(f"batch {batch_idx}: d_pos={d_pos:.4f} | d_neg={d_neg:.4f} | diff={diff:.4f}")
-    print("\nBest val distances:")
-    for batch_idx, d_pos, d_neg, diff in best_val_dists:
-        print(f"batch {batch_idx}: d_pos={d_pos:.4f} | d_neg={d_neg:.4f} | diff={diff:.4f}")
+    print(f"Best epoch:         {best_epoch}")
+    print(f"Best val loss:      {best_val_loss:.4f}")
+    print(f"Best val accuracy:  {best_val_accuracy:.2%}")
+    print(f"\nBest train distances: {format_dists(best_train_dists)}")
+    print(f"Best val distances:   {format_dists(best_val_dists)}")
     print(f"Checkpoint saved: {CHECKPOINT}")
     print(f"Reference embeddings saved: {REFERENCE}")
-    print("-" * 60)
+    print("-" * 90)
+
+
 
 if __name__ == "__main__":
     training()

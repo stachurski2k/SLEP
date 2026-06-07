@@ -1,7 +1,7 @@
 from pathlib import Path
 import numpy as np
 
-video_path = "Features/CALL/4471152825588167-CALL.npy"
+video_path = "Features/MORNING/410755409280005-MORNING.npy"
 seq = np.load(video_path)
 
 POSE = slice(0, 18)

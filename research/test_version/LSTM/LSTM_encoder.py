@@ -22,6 +22,7 @@ class LSTMEncoder(nn.Module):
         )
 
     def forward(self, x: torch.Tensor):
+        self.lstm.flatten_parameters()
         x = x * self.input_weights
 
         # h_n short-term memory, c_n long-term memory

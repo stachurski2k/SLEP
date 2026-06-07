@@ -1,57 +1,41 @@
 import torch
+import torch.nn.functional as F
 
 
 def pairwise_distances(embeddings: torch.Tensor) -> torch.Tensor:
-    dot = embeddings @ embeddings.t()                       # matrix product, result (B,B)
-    diagonal = dot.diag().unsqueeze(1)                      # diagonal elements, shape (B,1)
-
-    distances = diagonal + diagonal.t() - 2.0 * dot         # compute euclidean distances
-    distances = torch.clamp(distances, min=1e-12).sqrt()    # clamp and sqrt
-
-    return distances
+    dot = embeddings @ embeddings.t()
+    sq = dot.diag()
+    distances = sq.unsqueeze(1) + sq.unsqueeze(0) - 2.0 * dot
+    return distances.clamp(min=1e-12).sqrt()
 
 
-def print_embedding_distances(model, loader, device, n_batches=3):
-    model.eval()
-    summaries = []
+def distance_stats(distances: torch.Tensor, labels: torch.Tensor):
+    same = labels.unsqueeze(0) == labels.unsqueeze(1)
+    eye  = torch.eye(len(labels), dtype=torch.bool, device=labels.device)
+
+    pos_mask = same & ~eye
+    neg_mask = ~same
+
+    d_pos = distances[pos_mask].mean().item() if pos_mask.any() else float("nan")
+    d_neg = distances[neg_mask].mean().item() if neg_mask.any() else float("nan")
+
+    return d_pos, d_neg
+
+
+def embedding_distances(model, loader, device):
+
+    totals = {"pos": 0.0, "neg": 0.0, "n": 0}
 
     with torch.no_grad():
-        for batch_idx, (sequences, labels) in enumerate(loader):
-            if batch_idx >= n_batches:
-                break
+        for sequences, labels in loader:
+            embeddings = model(sequences.to(device))[1]
+            embeddings = F.normalize(embeddings, p=2, dim=1)
 
-            sequences = sequences.to(device)
-            labels = labels.to(device)
+            d_pos, d_neg = distance_stats(pairwise_distances(embeddings), labels.to(device))
 
-            _, last_state = model(sequences)
+            totals["pos"] += d_pos
+            totals["neg"] += d_neg
+            totals["n"]   += 1
 
-            last_state = torch.nn.functional.normalize(last_state, p=2, dim=1)
-
-            distances = pairwise_distances(last_state)
-
-            same_label = labels.unsqueeze(0) == labels.unsqueeze(1)
-            eye = torch.eye(len(labels), dtype=torch.bool, device=device)
-
-            positive_mask = same_label & ~eye
-            negative_mask = ~same_label
-
-            if positive_mask.any():
-                d_pos = distances[positive_mask].mean().item()
-            else:
-                d_pos = float("nan")
-
-            if negative_mask.any():
-                d_neg = distances[negative_mask].mean().item()
-            else:
-                d_neg = float("nan")
-
-            print(
-                f"batch {batch_idx + 1}: "
-                f"d_pos={d_pos:.4f} | "
-                f"d_neg={d_neg:.4f} | "
-                f"diff={d_neg - d_pos:.4f}"
-            )
-            summaries.append((batch_idx + 1, d_pos, d_neg, d_neg - d_pos))
-
-    model.train()
-    return summaries
+    n = totals["n"]
+    return {"d_pos": totals["pos"] / n, "d_neg": totals["neg"] / n, "diff": (totals["neg"] - totals["pos"]) / n}

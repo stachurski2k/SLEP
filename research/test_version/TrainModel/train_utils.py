@@ -1,9 +1,12 @@
+import os
+import tempfile
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
+
 
 class EarlyStopping:
     def __init__(self, patience=15, min_delta=0.001):
@@ -24,8 +27,41 @@ class EarlyStopping:
         return self.should_stop
 
 
-def has_triplets(triplets):
-    return len(triplets[0]) > 0
+def _atomic_write_path(path):
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+
+    tmp_file = tempfile.NamedTemporaryFile(
+        dir=directory,
+        prefix=f".{os.path.basename(path)}.",
+        suffix=".tmp",
+        delete=False,
+    )
+    tmp_file.close()
+    return tmp_file.name
+
+
+def atomic_torch_save(payload, path):
+    tmp_path = _atomic_write_path(path)
+    try:
+        torch.save(payload, tmp_path)
+        os.replace(tmp_path, path)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
+
+def atomic_np_savez(path, **arrays):
+    tmp_path = _atomic_write_path(path)
+    try:
+        with open(tmp_path, "wb") as file:
+            np.savez(file, **arrays)
+        os.replace(tmp_path, path)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
 
 
 def encode_reference_embeddings(model, loader, device, normalize=True):
@@ -64,7 +100,7 @@ def save_reference_embeddings(model, dataset, paths_with_labels, label_map, devi
         [label for label, _ in sorted(label_map.items(), key=lambda item: item[1])]
     )
 
-    np.savez(
+    atomic_np_savez(
         reference_path,
         embeddings=embeddings.astype(np.float32),
         labels=labels.astype(np.int64),
@@ -118,5 +154,5 @@ def evaluate_knn(model, train_eval_loader, val_eval_loader, device, normalize=Tr
     predictions = knn.predict(val_embeddings)
     accuracy = accuracy_score(val_labels, predictions)
 
-    return accuracy
+    return accuracy, val_labels, predictions
 
