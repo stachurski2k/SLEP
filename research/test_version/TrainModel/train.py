@@ -11,7 +11,7 @@ from DataProcessing.data_split import GestureDataset, build_splits
 from DataProcessing.augmentation import SequenceAugmentor
 from TrainModel.balanced_sampler import BalancedBatchSampler
 from TrainModel.emb_quality import embedding_distances
-from LSTM.LSTM_encoder import LSTMEncoder
+from LSTM.Transformer_encoder import TransformerEncoder
 from TrainModel.train_utils import (
     EarlyStopping,
     atomic_np_savez,
@@ -28,7 +28,7 @@ REFERENCE               = os.path.join(ARTIFACT_DIR, "reference_embeddings.npz")
 TRAINING_LOGS           = os.path.join(ARTIFACT_DIR, "training_logs.npz")
 
 # ── MODEL ────────────────────────────────────────────────────────────────
-MODEL                   = LSTMEncoder
+MODEL                   = TransformerEncoder
 INPUT_DIM               = 144
 HIDDEN_DIM              = 128
 NUM_LAYERS              = 2

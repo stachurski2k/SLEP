@@ -1,6 +1,3 @@
-from mediapipe.python.solutions import selfie_segmentation
-from numpy import dtype
-from cv2 import videoio_registry
 import os
 import numpy as np
 import torch
