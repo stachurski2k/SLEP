@@ -1,4 +1,4 @@
-import type { Dataset } from './actions'
+import type { Dataset, Video } from './actions'
 
 export type Page =
   | 'editor'
@@ -9,6 +9,11 @@ export type Page =
 
 export type DatasetRouteState = {
   dataset?: Dataset
+}
+
+export type EditorRouteState = {
+  dataset?: Dataset
+  video?: Video
 }
 
 export const routes = {

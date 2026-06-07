@@ -8,10 +8,10 @@ export default function Topbar() {
         />
         <div>
           <p className="m-0 text-[0.72rem] tracking-[0.14em] text-[#738099] uppercase">
-            Editing workspace
+            SLEP
           </p>
           <h1 className="m-0 text-2xl font-semibold tracking-normal text-[#f5f7fb]">
-            SLEP video
+            Data collector
           </h1>
         </div>
       </div>

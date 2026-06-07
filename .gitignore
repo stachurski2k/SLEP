@@ -1,2 +1,3 @@
 
 /src/data-collection-backend/tmp
+src/data-collection-backend/create_schema_pgadmin.sql

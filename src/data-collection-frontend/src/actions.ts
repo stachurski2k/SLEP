@@ -43,6 +43,15 @@ export type UploadUrlResponse = {
   expires_in: number
 }
 
+export type DownloadUrlPayload = {
+  s3_key: string
+  expires_in?: number
+}
+
+export type DownloadUrlResponse = {
+  url: string
+}
+
 export type GestureClass = {
   id: number
   name: string
@@ -59,6 +68,21 @@ export type GestureType = {
 
 export type GestureTypePayload = {
   name: string
+}
+
+export type VideoClip = {
+  id: number
+  start_frame_index: number
+  end_frame_index: number
+  gesture_class: GestureClass
+  gesture_type: GestureType
+}
+
+export type VideoClipPayload = {
+  start_frame_index: number
+  end_frame_index: number
+  gesture_class_id: number
+  gesture_type_id: number
 }
 
 export async function requestJson<T>(
@@ -134,6 +158,16 @@ export function getUploadUrl(payload: UploadUrlPayload) {
   })
 }
 
+export function getDownloadUrl(payload: DownloadUrlPayload) {
+  return requestJson<DownloadUrlResponse>('/api/v1/s3/download-url', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
 export async function uploadFileToSignedUrl(
   url: string,
   file: File,
@@ -171,6 +205,10 @@ export function deleteDataset(datasetId: number) {
   })
 }
 
+export function getGestureClasses() {
+  return requestJson<GestureClass[]>('/api/v1/gesture-classes/')
+}
+
 export function deleteGestureClass(gestureClassId: number) {
   return request(`/api/v1/gesture-classes/${gestureClassId}`, {
     method: 'DELETE',
@@ -203,6 +241,10 @@ export function updateGestureClass(
   })
 }
 
+export function getGestureTypes() {
+  return requestJson<GestureType[]>('/api/v1/gesture-types/')
+}
+
 export function deleteGestureType(gestureTypeId: number) {
   return request(`/api/v1/gesture-types/${gestureTypeId}`, {
     method: 'DELETE',
@@ -214,6 +256,16 @@ export function deleteGestureType(gestureTypeId: number) {
 
 export function createGestureType(payload: GestureTypePayload) {
   return requestJson<GestureType>('/api/v1/gesture-types/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function createVideoClip(videoId: number, payload: VideoClipPayload) {
+  return requestJson<VideoClip>(`/api/v1/videos/${videoId}/clips`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

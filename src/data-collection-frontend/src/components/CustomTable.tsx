@@ -46,6 +46,7 @@ type CustomTableProps<Row> = {
   url: string
   getRowKey: (row: Row) => Key
   onRowClick?: (row: Row) => void
+  onRowsChange?: (rows: Row[]) => void
   rowAriaLabel?: (row: Row) => string
   selectedRowKey?: Key | null
   refreshKey?: number
@@ -60,6 +61,7 @@ export default function CustomTable<Row>({
   url,
   getRowKey,
   onRowClick,
+  onRowsChange,
   rowAriaLabel,
   selectedRowKey = null,
   refreshKey = 0,
@@ -81,10 +83,12 @@ export default function CustomTable<Row>({
 
         if (!isCancelled) {
           setRows(nextRows)
+          onRowsChange?.(nextRows)
         }
       } catch {
         if (!isCancelled) {
           setRows([])
+          onRowsChange?.([])
           toast.error(`Unable to load ${normalizedLabel}`)
         }
       } finally {
@@ -99,7 +103,7 @@ export default function CustomTable<Row>({
     return () => {
       isCancelled = true
     }
-  }, [normalizedLabel, refreshKey, url])
+  }, [normalizedLabel, onRowsChange, refreshKey, url])
 
   if (isLoading) {
     return (
