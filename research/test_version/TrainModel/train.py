@@ -1,4 +1,3 @@
-from DataProcessing import augmentation
 import os
 import random
 import numpy as np
@@ -11,7 +10,9 @@ from DataProcessing.data_split import GestureDataset, build_splits
 from DataProcessing.augmentation import SequenceAugmentor
 from TrainModel.balanced_sampler import BalancedBatchSampler
 from TrainModel.emb_quality import embedding_distances
-from LSTM.Transformer_encoder import TransformerEncoder
+from Models.LSTM_encoder import LSTMEncoder
+from Models.Transformer_encoder import TransformerEncoder
+
 from TrainModel.train_utils import (
     EarlyStopping,
     atomic_np_savez,
@@ -22,7 +23,7 @@ from TrainModel.train_utils import (
 
 # ── PATHS ────────────────────────────────────────────────────────────────
 LANDMARKS_DIR           = "Features"
-ARTIFACT_DIR            = os.path.join("LSTM", "Checkpoints")
+ARTIFACT_DIR            = os.path.join("Models", "Checkpoints")
 CHECKPOINT              = os.path.join(ARTIFACT_DIR, "best_encoder.pt")
 REFERENCE               = os.path.join(ARTIFACT_DIR, "reference_embeddings.npz")
 TRAINING_LOGS           = os.path.join(ARTIFACT_DIR, "training_logs.npz")
@@ -147,7 +148,7 @@ def training():
     early_stopping = EarlyStopping(patience=EARLY_STOP_PATIENCE, min_delta=EARLY_STOP_DELTA)
 
     print("-" * 90)
-    print(f"Model: LSTM      input= {INPUT_DIM}      hidden= {HIDDEN_DIM}   "
+    print(f"Model: {MODEL.__name__}      input= {INPUT_DIM}      hidden= {HIDDEN_DIM}   "
           f"layers= {NUM_LAYERS}   dropout= {DROPOUT}    device= {DEVICE}")
     print(f"Training: epochs= {EPOCHS}    lr= {LEARNING_RATE}    "
           f"MultiSimilarityLoss: alpha= {MS_ALPHA} beta= {MS_BETA} base= {MS_BASE}")
