@@ -1,4 +1,6 @@
+import { useCallback, useMemo, useState } from 'react'
 import type { Video } from '../actions'
+import type { VideoClip } from '../actions'
 import {
   fieldControlClass,
   fieldLabelClass,
@@ -13,6 +15,7 @@ import {
   TIMELINE_PADDING,
   useVideoEditor,
 } from './VideoEditor.hook'
+import VideoClipsTable from './VideoClipsTable'
 import NextFrameIcon from './icons/NextFrameIcon'
 import PauseIcon from './icons/PauseIcon'
 import PlayIcon from './icons/PlayIcon'
@@ -29,11 +32,24 @@ type VideoEditorProps = {
   video: Video | null
 }
 
+type ClipState = {
+  videoId: number | null
+  clips: VideoClip[]
+  selectedClipIds: number[]
+}
+
 export default function VideoEditor({ video }: VideoEditorProps) {
+  const [clipState, setClipState] = useState<ClipState>({
+    videoId: null,
+    clips: [],
+    selectedClipIds: [],
+  })
+  const [clipsTableRefreshKey, setClipsTableRefreshKey] = useState(0)
   const {
     asset,
     clipPointMarkers,
     clipSelection,
+    clipsRefreshKey,
     clipWidth,
     currentFrameTimeLabel,
     endFrameLabel,
@@ -64,16 +80,65 @@ export default function VideoEditor({ video }: VideoEditorProps) {
     videoRef,
     zoom,
   } = useVideoEditor(video)
+  const videoId = video?.id ?? null
+  const activeClips = useMemo(
+    () => (clipState.videoId === videoId ? clipState.clips : []),
+    [clipState.clips, clipState.videoId, videoId],
+  )
+  const activeSelectedClipIds = useMemo(
+    () => (clipState.videoId === videoId ? clipState.selectedClipIds : []),
+    [clipState.selectedClipIds, clipState.videoId, videoId],
+  )
+
+  const handleRowsChange = useCallback((nextClips: VideoClip[]) => {
+    const nextClipIds = new Set(nextClips.map((clip) => clip.id))
+
+    setClipState((currentState) => {
+      const currentSelectedClipIds =
+        currentState.videoId === videoId ? currentState.selectedClipIds : []
+
+      return {
+        videoId,
+        clips: nextClips,
+        selectedClipIds: currentSelectedClipIds.filter((clipId) =>
+          nextClipIds.has(clipId),
+        ),
+      }
+    })
+  }, [videoId])
+
+  const handleToggleClip = useCallback(
+    (clip: VideoClip) => {
+      setClipState((currentState) => {
+        const currentSelectedClipIds =
+          currentState.videoId === videoId ? currentState.selectedClipIds : []
+
+        return {
+          videoId,
+          clips: currentState.videoId === videoId ? currentState.clips : [],
+          selectedClipIds: currentSelectedClipIds.includes(clip.id)
+            ? currentSelectedClipIds.filter((clipId) => clipId !== clip.id)
+            : [...currentSelectedClipIds, clip.id],
+        }
+      })
+    },
+    [videoId],
+  )
+
+  const selectedTimelineClips = useMemo(
+    () => activeClips.filter((clip) => activeSelectedClipIds.includes(clip.id)),
+    [activeClips, activeSelectedClipIds],
+  )
 
   return (
     <>
       <div className={`${panelClass} min-h-0 overflow-hidden`}>
         {asset ? (
-          <div className="grid p-[18px] max-[720px]:p-3.5">
+          <div className="grid grid-cols-[minmax(0,1fr)_550px] gap-4 p-[18px] max-[1180px]:grid-cols-1 max-[720px]:p-3.5">
             <video
               key={asset.filepath}
               ref={videoRef}
-              className="block min-h-[750px] max-h-[40vh] w-full rounded-[18px] border border-slate-400/10 bg-[radial-gradient(circle_at_top,rgba(61,217,179,0.14),transparent_22%),#05070b] object-contain max-[720px]:min-h-60"
+              className="block aspect-video max-h-[58vh] w-full rounded-[18px] border border-slate-400/10 bg-[radial-gradient(circle_at_top,rgba(61,217,179,0.14),transparent_22%),#05070b] object-contain max-[720px]:max-h-none"
               src={asset.url}
               controls={false}
               onLoadedMetadata={handleLoadedMetadata}
@@ -82,6 +147,20 @@ export default function VideoEditor({ video }: VideoEditorProps) {
               onPause={() => setIsPlaying(false)}
               onEnded={() => setIsPlaying(false)}
             />
+            {video ? (
+              <VideoClipsTable
+                videoId={video.id}
+                gestureClasses={gestureClasses}
+                gestureTypes={gestureTypes}
+                selectedClipIds={activeSelectedClipIds}
+                refreshKey={clipsRefreshKey + clipsTableRefreshKey}
+                onClipChanged={() =>
+                  setClipsTableRefreshKey((currentKey) => currentKey + 1)
+                }
+                onRowsChange={handleRowsChange}
+                onToggleClip={handleToggleClip}
+              />
+            ) : null}
           </div>
         ) : (
           <div className="grid min-h-[750px] place-items-center rounded-[22px] border border-slate-400/10 bg-[linear-gradient(135deg,rgba(61,217,179,0.08),transparent_36%),linear-gradient(225deg,rgba(75,123,255,0.1),transparent_30%),rgba(7,11,18,0.86)] p-9 max-[720px]:min-h-60">
@@ -232,6 +311,33 @@ export default function VideoEditor({ video }: VideoEditorProps) {
                       aria-hidden="true"
                     />
                   ) : null}
+
+                  {asset
+                    ? selectedTimelineClips.map((clip) => {
+                        const left =
+                          TIMELINE_PADDING +
+                          (clip.start_frame_index / fps) * zoom
+                        const width = Math.max(
+                          ((clip.end_frame_index - clip.start_frame_index) /
+                            fps) *
+                            zoom,
+                          2,
+                        )
+
+                        return (
+                          <div
+                            key={clip.id}
+                            className="pointer-events-none absolute top-[140px] h-[34px] rounded-[10px] border border-emerald-300/45 bg-emerald-300/14"
+                            style={{ left, width }}
+                            aria-hidden="true"
+                          >
+                            <span className="absolute -top-6 left-0 max-w-[220px] truncate rounded-full border border-emerald-300/30 bg-[#07110f]/95 px-2 py-0.5 text-[0.68rem] font-semibold text-emerald-100 shadow-[0_10px_24px_rgba(0,0,0,0.28)]">
+                              {clip.id} {clip.gesture_class.name}
+                            </span>
+                          </div>
+                        )
+                      })
+                    : null}
 
                   {asset
                     ? clipPointMarkers.map((point) => (

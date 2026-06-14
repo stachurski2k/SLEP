@@ -125,6 +125,7 @@ export function useVideoEditor(video: Video | null) {
     readCachedValue(SELECTED_GESTURE_TYPE_CACHE_KEY),
   )
   const [isSavingClip, setIsSavingClip] = useState(false)
+  const [clipsRefreshKey, setClipsRefreshKey] = useState(0)
 
   const asset =
     video && loadedAsset?.filepath === video.filepath ? loadedAsset : null
@@ -318,6 +319,7 @@ export function useVideoEditor(video: Video | null) {
         gesture_class_id: Number(selectedGestureClassId),
         gesture_type_id: Number(selectedGestureTypeId),
       })
+      setClipsRefreshKey((currentKey) => currentKey + 1)
       toast.success('Clip saved')
     } catch {
       toast.error('Unable to save clip')
@@ -499,6 +501,7 @@ export function useVideoEditor(video: Video | null) {
     asset,
     clipPointMarkers,
     clipSelection,
+    clipsRefreshKey,
     clipWidth,
     currentFrameTimeLabel: formatFrameTime(activeCurrentTime, fps),
     endFrameLabel: formatFrameIndex(endFrameIndex),

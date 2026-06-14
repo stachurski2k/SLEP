@@ -274,6 +274,25 @@ export function createVideoClip(videoId: number, payload: VideoClipPayload) {
   })
 }
 
+export function updateVideoClip(clipId: number, payload: VideoClipPayload) {
+  return requestJson<VideoClip>(`/api/v1/videos/clips/${clipId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteVideoClip(clipId: number) {
+  return request(`/api/v1/videos/clips/${clipId}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: '*/*',
+    },
+  })
+}
+
 export function updateGestureType(
   gestureTypeId: number,
   payload: GestureTypePayload,

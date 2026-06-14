@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Key, ReactNode } from 'react'
 import { toast } from 'sonner'
 import { requestJson } from '../actions'
@@ -49,8 +49,10 @@ type CustomTableProps<Row> = {
   onRowsChange?: (rows: Row[]) => void
   rowAriaLabel?: (row: Row) => string
   selectedRowKey?: Key | null
+  selectedRowKeys?: Key[]
   refreshKey?: number
   emptyDescription?: string
+  tableClassName?: string
 }
 
 export default function CustomTable<Row>({
@@ -64,13 +66,19 @@ export default function CustomTable<Row>({
   onRowsChange,
   rowAriaLabel,
   selectedRowKey = null,
+  selectedRowKeys = [],
   refreshKey = 0,
   emptyDescription,
+  tableClassName = 'min-w-[780px]',
 }: CustomTableProps<Row>) {
   const [rows, setRows] = useState<Row[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const normalizedLabel = label.trim()
   const tableHeading = heading?.trim() || toTitleCase(normalizedLabel)
+  const selectedKeySet = useMemo(
+    () => new Set(selectedRowKeys),
+    [selectedRowKeys],
+  )
 
   useEffect(() => {
     let isCancelled = false
@@ -135,7 +143,7 @@ export default function CustomTable<Row>({
         statusLabel={`${rows.length} ${normalizedLabel}`}
       />
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[780px] border-collapse">
+        <table className={`w-full border-collapse ${tableClassName}`}>
           <thead>
             <tr>
               {columns.map((column) => (
@@ -164,7 +172,10 @@ export default function CustomTable<Row>({
                 key={getRowKey(row)}
                 className={[
                   '[&:last-child>td]:border-b-0',
-                  getRowKey(row) === selectedRowKey ? selectedRowClass : '',
+                  getRowKey(row) === selectedRowKey ||
+                  selectedKeySet.has(getRowKey(row))
+                    ? selectedRowClass
+                    : '',
                   isRowClickable ? clickableRowClass : '',
                 ]
                   .filter(Boolean)

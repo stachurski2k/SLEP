@@ -121,6 +121,7 @@ class VideoCrud:
             query = query.where(Clip.gesture_class_id == gesture_class_id)
         if gesture_type_id is not None:
             query = query.where(Clip.gesture_type_id == gesture_type_id)
+        query = query.order_by(Clip.start_frame_index.asc())
         result = await self.db.execute(query)
         return [ClipSchema.model_validate(row) for row in result.scalars().all()]
 
