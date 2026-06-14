@@ -4,6 +4,10 @@ import numpy as np
 # ── LANDMARK SLICES (matching preprocessing.py) ───────────────────────────
 LEFT_SHOULDER  = slice(0, 3)
 RIGHT_SHOULDER = slice(3, 6)
+LEFT_ELBOW     = slice(6, 9)
+RIGHT_ELBOW    = slice(9, 12)
+LEFT_WRIST     = slice(12, 15)
+RIGHT_WRIST    = slice(15, 18)
 LEFT_HAND      = slice(18, 81)
 RIGHT_HAND     = slice(81, 144)
 
@@ -16,22 +20,21 @@ def gaussian_noise(sequence: np.ndarray, std=0.02) -> np.ndarray:
 def temporal_stretch(sequence: np.ndarray, min_factor=0.8, max_factor=1.2) -> np.ndarray:
     T, F = sequence.shape
     factor = np.random.uniform(min_factor, max_factor)
-    new_T  = max(4, int(T * factor))
+    new_T = max(4, int(T * factor))
 
-    src_t  = np.linspace(0, 1, T)
-    dst_t  = np.linspace(0, 1, new_T)
+    src_t = np.linspace(0, 1, T)
+    dst_t = np.linspace(0, 1, new_T)
     stretched = np.stack(
         [np.interp(dst_t, src_t, sequence[:, f]) for f in range(F)],
         axis=1
     ).astype(np.float32)
 
-    # resample back to original length
-    src_t2 = np.linspace(0, 1, new_T)
-    dst_t2 = np.linspace(0, 1, T)
-    return np.stack(
-        [np.interp(dst_t2, src_t2, stretched[:, f]) for f in range(F)],
-        axis=1
-    ).astype(np.float32)
+    if new_T >= T:
+        start = np.random.randint(0, new_T - T + 1)
+        return stretched[start:start + T]
+    else:
+        pad = np.repeat(stretched[[-1]], T - new_T, axis=0)
+        return np.concatenate([stretched, pad], axis=0)
 
 
 def temporal_warp(sequence: np.ndarray, num_knots=4, std=0.1) -> np.ndarray:
@@ -39,15 +42,15 @@ def temporal_warp(sequence: np.ndarray, num_knots=4, std=0.1) -> np.ndarray:
     knot_x = np.linspace(0, 1, num_knots + 2)
     knot_y = knot_x + np.concatenate([[0], np.random.uniform(-std, std, num_knots), [0]])
     knot_y = np.clip(knot_y, 0, 1)
-    knot_y[0], knot_y[-1] = 0.0, 1.0  # keep endpoints fixed
+    knot_y[0], knot_y[-1] = 0.0, 1.0
+
+    knot_y = np.maximum.accumulate(knot_y)
 
     src_t = np.linspace(0, 1, T)
     warped_t = np.interp(src_t, knot_x, knot_y)
-    warped_t = np.clip(warped_t, 0.0, 1.0)
 
-    src_t2 = np.linspace(0, 1, T)
     return np.stack(
-        [np.interp(warped_t, src_t2, sequence[:, f]) for f in range(F)],
+        [np.interp(warped_t, src_t, sequence[:, f]) for f in range(F)],
         axis=1
     ).astype(np.float32)
 
@@ -73,6 +76,18 @@ def mirror_horizontal(sequence: np.ndarray) -> np.ndarray:
     right_sh = seq[:, RIGHT_SHOULDER].copy()
     seq[:, LEFT_SHOULDER]  = right_sh
     seq[:, RIGHT_SHOULDER] = left_sh
+
+    # swap left ↔ right elbow
+    left_elb = seq[:, LEFT_ELBOW].copy()
+    right_elb = seq[:, RIGHT_ELBOW].copy()
+    seq[:, LEFT_ELBOW]  = right_elb
+    seq[:, RIGHT_ELBOW] = left_elb
+
+    # swap left ↔ right wrist
+    left_wr = seq[:, LEFT_WRIST].copy()
+    right_wr = seq[:, RIGHT_WRIST].copy()
+    seq[:, LEFT_WRIST]  = right_wr
+    seq[:, RIGHT_WRIST] = left_wr
 
     return seq.astype(np.float32)
 

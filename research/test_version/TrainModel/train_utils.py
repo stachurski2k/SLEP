@@ -64,27 +64,30 @@ def atomic_np_savez(path, **arrays):
         raise
 
 
-def encode_reference_embeddings(model, loader, device, normalize=True):
+def get_embeddings(model, loader, device, normalize=True):
     model.eval()
-    all_embeddings = []
+
+    all_last_embeddings = []
+    all_seq_embeddings = []
     all_labels = []
 
     with torch.no_grad():
         for seq, labels in loader:
             seq = seq.to(device)
 
-            _, embeddings = model(seq)
+            seq_embeddings, last_embeddings = model(seq)
 
             if normalize:
-                embeddings = F.normalize(embeddings, p=2, dim=1)
+                last_embeddings = F.normalize(last_embeddings, p=2, dim=1)
 
-            all_embeddings.append(embeddings.cpu().numpy())
+            all_last_embeddings.append(last_embeddings.cpu().numpy())
+            all_seq_embeddings.append(seq_embeddings.cpu().numpy())
             all_labels.append(labels.numpy())
 
-    return np.concatenate(all_embeddings), np.concatenate(all_labels)
+    return np.concatenate(all_last_embeddings), np.concatenate(all_seq_embeddings), np.concatenate(all_labels)
 
 
-def save_reference_embeddings(model, dataset, paths_with_labels, label_map, device, reference_path, normalize=True):
+def save_embeddings(model, dataset, paths_with_labels, label_map, device, save_path, normalize=True):
     reference_loader = DataLoader(
         dataset=dataset,
         batch_size=64,
@@ -93,7 +96,7 @@ def save_reference_embeddings(model, dataset, paths_with_labels, label_map, devi
         pin_memory=torch.cuda.is_available(),
     )
 
-    embeddings, labels = encode_reference_embeddings(model, reference_loader, device, normalize=normalize)
+    last_embeddings, seq_embeddings, labels = get_embeddings(model, reference_loader, device, normalize=normalize)
     paths = np.array([path for path, _ in paths_with_labels])
     label_names = np.array([label for _, label in paths_with_labels])
     id_to_label = np.array(
@@ -101,44 +104,25 @@ def save_reference_embeddings(model, dataset, paths_with_labels, label_map, devi
     )
 
     atomic_np_savez(
-        reference_path,
-        embeddings=embeddings.astype(np.float32),
+        save_path,
+        last_embeddings=last_embeddings.astype(np.float32),
+        seq_embeddings=seq_embeddings.astype(np.float32),
         labels=labels.astype(np.int64),
         paths=paths,
         label_names=label_names,
         id_to_label=id_to_label,
     )
 
-def get_embeddings(model, loader, device, normalize=True):
-    model.eval()
-
-    all_embeddings = []
-    all_labels = []
-
-    with torch.no_grad():
-        for seq, labels in loader:
-            seq = seq.to(device)
-
-            _, embeddings = model(seq)
-
-            if normalize:
-                embeddings = F.normalize(embeddings, p=2, dim=1)
-
-            all_embeddings.append(embeddings.cpu().numpy())
-            all_labels.append(labels.numpy())
-
-    return np.concatenate(all_embeddings), np.concatenate(all_labels)
-
 
 def evaluate_knn(model, train_eval_loader, val_eval_loader, device, normalize=True):
-    train_embeddings, train_labels = get_embeddings(
+    train_embeddings, _, train_labels = get_embeddings(
         model,
         train_eval_loader,
         device,
         normalize=normalize
     )
 
-    val_embeddings, val_labels = get_embeddings(
+    val_embeddings, _, val_labels = get_embeddings(
         model,
         val_eval_loader,
         device,

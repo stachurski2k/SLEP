@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import torch
-import random
 from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
 from DataProcessing.preprocessing import preprocess
@@ -15,7 +14,7 @@ class GestureDataset(Dataset):
         self.data = []        
         for path, label_str in paths:
             seq = np.load(path)
-            seq = preprocess(seq)
+            seq = preprocess(seq, target_len=60)
             self.data.append(seq.astype(np.float32)) 
             self.labels.append(label_map[label_str])
 

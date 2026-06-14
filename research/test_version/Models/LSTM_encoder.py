@@ -3,9 +3,9 @@ import torch.nn as nn
 
 
 class LSTMEncoder(nn.Module):
-    def __init__(self, input_dim=144, hidden_dim=64, num_layers=3, dropout=0.3):
+    def __init__(self, input_dim=144, hidden_dim=128,num_layers=3, dropout=0.3):
         super().__init__()
-
+        
         # input weights
         weights = torch.ones(input_dim)
         weights[0:18]   = 1.0   # pose
@@ -21,14 +21,25 @@ class LSTMEncoder(nn.Module):
             dropout=dropout if num_layers > 1 else 0.0,
         )
 
-    def forward(self, x: torch.Tensor):
+        embedding_dim=64
+
+        self.embedding_head = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, embedding_dim)
+        )
+
+        self.decoder = nn.Linear(hidden_dim, input_dim)
+
+    def forward(self, x):
         self.lstm.flatten_parameters()
         x = x * self.input_weights
 
-        # h_n short-term memory, c_n long-term memory
         output, (h_n, c_n) = self.lstm(x)
 
-        sequence = output       # (B, T, hidden_dim)   → DTW
-        last_state = h_n[-1]    # (B, hidden_dim)      → FAISS
+        pooled = output.mean(dim=1)
+        embedding = self.embedding_head(pooled)
 
-        return sequence, last_state
+        reconstructed = self.decoder(output)
+
+        return reconstructed, embedding

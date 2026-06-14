@@ -10,34 +10,25 @@ from DataProcessing.data_split import GestureDataset, build_splits
 from DataProcessing.augmentation import SequenceAugmentor
 from TrainModel.balanced_sampler import BalancedBatchSampler
 from TrainModel.emb_quality import embedding_distances
-from Models.LSTM_encoder import LSTMEncoder
-from Models.Transformer_encoder import TransformerEncoder
-
 from TrainModel.train_utils import (
     EarlyStopping,
     atomic_np_savez,
     atomic_torch_save,
     evaluate_knn,
-    save_reference_embeddings,
+    save_embeddings,
 )
 
 # ── PATHS ────────────────────────────────────────────────────────────────
 LANDMARKS_DIR           = "Features"
-ARTIFACT_DIR            = os.path.join("Models", "Checkpoints")
-CHECKPOINT              = os.path.join(ARTIFACT_DIR, "best_encoder.pt")
-REFERENCE               = os.path.join(ARTIFACT_DIR, "reference_embeddings.npz")
-TRAINING_LOGS           = os.path.join(ARTIFACT_DIR, "training_logs.npz")
 
 # ── MODEL ────────────────────────────────────────────────────────────────
-MODEL                   = TransformerEncoder
 INPUT_DIM               = 144
-HIDDEN_DIM              = 128
+HIDDEN_DIM              = 256
 NUM_LAYERS              = 2
 DROPOUT                 = 0.4
-TARGET_LEN              = 60
 
 # ── TRAINING ─────────────────────────────────────────────────────────────
-EPOCHS                  = 300
+EPOCHS                  = 500
 VAL_RATIO               = 0.3
 SEED                    = 42
 NORMALIZE_EMBEDDINGS    = True
@@ -64,7 +55,7 @@ EMA_DECAY               = 0.99
 EMA_START_EPOCH         = 30
 
 # ── EARLY STOPPING ───────────────────────────────────────────────────────
-EARLY_STOP_PATIENCE     = 30
+EARLY_STOP_PATIENCE     = 50
 EARLY_STOP_DELTA        = 0.005
 
 # ── AUGMENTATION ─────────────────────────────────────────────────────────
@@ -91,14 +82,22 @@ def format_dists(dists):
     )
 
 
-def training():
+def training(model_encoder):
     np.random.seed(SEED)
     random.seed(SEED)
     torch.manual_seed(SEED)
 
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    os.makedirs(ARTIFACT_DIR, exist_ok=True)
+    # ── PATHS ─────────────────────────────────────────────────────────────
+    model_name = model_encoder.__name__
+    artifact_dir = os.path.join("Models", f"{model_name}_Checkpoints")
+    os.makedirs(artifact_dir, exist_ok=True)
+    
+    best_encoder_file            = os.path.join(artifact_dir, "best_encoder.pt")
+    train_embeddings_file        = os.path.join(artifact_dir, "train_embeddings.npz")
+    val_embeddings_file          = os.path.join(artifact_dir, "val_embeddings.npz")
+    training_logs_file           = os.path.join(artifact_dir, "training_logs.npz")
 
     # ── DATA ─────────────────────────────────────────────────────────────
     train_paths, val_paths, label_map = build_splits(
@@ -136,7 +135,7 @@ def training():
     )
 
     # ── MODEL ─────────────────────────────────────────────────────────────
-    model     = MODEL(INPUT_DIM, HIDDEN_DIM, NUM_LAYERS, DROPOUT).to(DEVICE)
+    model     = model_encoder(INPUT_DIM, HIDDEN_DIM, NUM_LAYERS, DROPOUT).to(DEVICE)
     criterion = losses.MultiSimilarityLoss(alpha=MS_ALPHA, beta=MS_BETA, base=MS_BASE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     ema_model = AveragedModel(
@@ -148,7 +147,7 @@ def training():
     early_stopping = EarlyStopping(patience=EARLY_STOP_PATIENCE, min_delta=EARLY_STOP_DELTA)
 
     print("-" * 90)
-    print(f"Model: {MODEL.__name__}      input= {INPUT_DIM}      hidden= {HIDDEN_DIM}   "
+    print(f"Model: {model_name}      input= {INPUT_DIM}      hidden= {HIDDEN_DIM}   "
           f"layers= {NUM_LAYERS}   dropout= {DROPOUT}    device= {DEVICE}")
     print(f"Training: epochs= {EPOCHS}    lr= {LEARNING_RATE}    "
           f"MultiSimilarityLoss: alpha= {MS_ALPHA} beta= {MS_BETA} base= {MS_BASE}")
@@ -185,9 +184,14 @@ def training():
             seq    = seq.to(DEVICE)
             labels = labels.to(DEVICE)
 
-            _, last_state = model(seq)
-            last_state    = F.normalize(last_state, p=2, dim=1)
-            loss          = criterion(last_state, labels)
+            reconstructed, embedding = model(seq)
+
+            embeddings = F.normalize(embedding, dim=1)
+
+            loss_ms = criterion(embeddings, labels)
+            rec_loss = F.mse_loss(reconstructed, seq)
+
+            loss = loss_ms + 0.25 * rec_loss
 
             optimizer.zero_grad()
             loss.backward()
@@ -214,9 +218,12 @@ def training():
                 seq    = seq.to(DEVICE)
                 labels = labels.to(DEVICE)
 
-                _, last_state = current_eval_model(seq)
+                reconstructed, last_state = current_eval_model(seq)
+
                 last_state = F.normalize(last_state, p=2, dim=1)
-                loss = criterion(last_state, labels)
+                loss_ms = criterion(last_state, labels)
+                rec_loss = F.mse_loss(reconstructed, seq)
+                loss = loss_ms + 0.25 * rec_loss
 
                 val_loss += loss.item()
                 val_batches += 1
@@ -257,26 +264,24 @@ def training():
             model_state, model_state_source = export_model_state(current_eval_model)
 
             checkpoint = {
-                "epoch": epoch,
                 "model_state": model_state,
-                "model_state_source": model_state_source,
-                "raw_model_state": model.state_dict(),
-                "ema_model_state": ema_model.state_dict(),
-                "optimizer_state": optimizer.state_dict(),
-                "scheduler_state": scheduler.state_dict(),
-                "train_loss": train_loss,
-                "val_loss": val_loss,
-                "best_val_accuracy": best_val_accuracy,
-                "best_val_loss": best_val_loss,
                 "label_map": label_map,
-                "reference_path": REFERENCE,
+                "train_embeddings": train_embeddings_file,
+                "val_embeddings": val_embeddings_file,
                 "config": {
                     "input_dim": INPUT_DIM,
                     "hidden_dim": HIDDEN_DIM,
                     "num_layers": NUM_LAYERS,
                     "dropout": DROPOUT,
-                    "target_len": TARGET_LEN,
                     "normalize_embeddings": NORMALIZE_EMBEDDINGS,
+                },
+                "metadata":{
+                    "optimizer": "Adam",
+                    "scheduler": "CosineAnnealingWarmRestarts",
+                    "lr": LEARNING_RATE,
+                    "min_lr": MIN_LR,
+                    "scheduler_patience": PATIENCE,
+                    "scheduler_factor": FACTOR,
                     "loss": "MultiSimilarityLoss",
                     "alpha": MS_ALPHA,
                     "beta": MS_BETA,
@@ -286,13 +291,22 @@ def training():
                     "p_val": P_VAL,
                     "k_val": K_VAL,
                     "selection_metric": "val_1nn_accuracy",
-                },
+                    "train_acc": best_val_accuracy,
+                    "train_loss": best_val_loss,
+                    "val_acc": val_accuracy,
+                    "val_loss": val_loss,
+                    "best_epoch": best_epoch,
+                }
             }
 
-            atomic_torch_save(checkpoint, CHECKPOINT)
-            save_reference_embeddings(
+            atomic_torch_save(checkpoint, best_encoder_file)
+            save_embeddings(
                 current_eval_model, train_eval_ds, train_paths,
-                label_map, DEVICE, REFERENCE, normalize=NORMALIZE_EMBEDDINGS
+                label_map, DEVICE, train_embeddings_file, normalize=NORMALIZE_EMBEDDINGS
+            )
+            save_embeddings(
+                current_eval_model, val_ds, val_paths,
+                label_map, DEVICE, val_embeddings_file, normalize=NORMALIZE_EMBEDDINGS
             )
             saved = "  <- best"
 
@@ -311,7 +325,7 @@ def training():
         
         # ── SAVE LOGS ───────────────────────────────────────────────────
         atomic_np_savez(
-            TRAINING_LOGS,
+            training_logs_file,
             epochs = np.arange(1, len(train_loss_history) + 1),
             train_loss = np.array(train_loss_history, dtype=np.float32),
             val_loss = np.array(val_loss_history, dtype=np.float32),
@@ -353,14 +367,12 @@ def training():
 
     print("\n" + "-" * 90)
     print("Training completed")
-    print(f"Best epoch:         {best_epoch}")
+    print(f"\nBest epoch:         {best_epoch}")
     print(f"Best val loss:      {best_val_loss:.4f}")
     print(f"Best val accuracy:  {best_val_accuracy:.2%}")
     print(f"\nBest train distances: {format_dists(best_train_dists)}")
     print(f"Best val distances:   {format_dists(best_val_dists)}")
-    print(f"Checkpoint saved: {CHECKPOINT}")
-    print(f"Reference embeddings saved: {REFERENCE}")
-    print("-" * 90)
+    print(f"\nData saved in directory: {artifact_dir}")
 
 
 
