@@ -1,4 +1,3 @@
-from mediapipe.python.solutions import selfie_segmentation
 import random
 from torch.utils.data import Sampler
 

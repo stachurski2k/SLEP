@@ -1,0 +1,21 @@
+[project]
+name = "test-version"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "mediapipe==0.10.35",
+    "opencv-python>=4.8",
+    "numpy>1.24,<2.0",
+    "scipy>=1.10",
+    "tqdm>=4.65",
+    "pytorch-metric-learning>=2.7",
+    "torch>=2.0.0",
+    "scikit-learn>=1.2.0",
+    "plotly>=5.15.0",
+    "pandas>=3.0.3",
+    "colorcet>=3.0.1",
+    "faiss-cpu==1.14.2",
+    "dtaidistance==2.4.0"
+]

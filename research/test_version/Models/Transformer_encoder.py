@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 
-class TransformerEncoder(nn.Module):
+class TransformerEncoder_model(nn.Module):
     def __init__(
         self,
         input_dim=144,
@@ -50,8 +50,10 @@ class TransformerEncoder(nn.Module):
         embedding_dim=64
 
         self.embedding_head = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.Linear(3*hidden_dim, 2*hidden_dim),
+            nn.GELU(),
+            nn.Linear(2*hidden_dim, hidden_dim),
+            nn.GELU(),
             nn.Linear(hidden_dim, embedding_dim),
         )
 
@@ -68,7 +70,12 @@ class TransformerEncoder(nn.Module):
 
         reconstructed = self.decoder(sequence) 
 
-        pooled = sequence.mean(dim=1)  
-        embedding = self.embedding_head(pooled)  
+        pooled_mean = sequence.mean(dim=1)  
+        pooled_min, _ = sequence.min(dim=1)  
+        pooled_max, _ = sequence.max(dim=1)  
+
+        embedding_combined = torch.cat((pooled_mean, pooled_min, pooled_max), dim=1)
+
+        embedding = self.embedding_head(embedding_combined)
 
         return reconstructed, embedding

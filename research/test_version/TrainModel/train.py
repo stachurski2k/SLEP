@@ -377,4 +377,26 @@ def training(model_encoder):
 
 
 if __name__ == "__main__":
-    training()
+    import argparse
+    args = argparse.ArgumentParser()
+    args.add_argument("--model", type=str, default="transformer")
+    args = args.parse_args()
+    from Models.Transformer_encoder import TransformerEncoder_model
+    from Models.LSTM_encoder import LSTMEncoder
+    from Models.BiLSTM_encoder import BiLSTMEncoder
+    from Models.GRU_encoder import GRUEncoder
+    from Models.BiGRU_encoder import BiGRUEncoder
+    
+    if args.model == "transformer":
+        model = TransformerEncoder_model
+    elif args.model == "lstm":
+        model = LSTMEncoder
+    elif args.model == "bilstm":
+        model = BiLSTMEncoder
+    elif args.model == "gru":
+        model = GRUEncoder
+    elif args.model == "bigru":
+        model = BiGRUEncoder
+    else:
+        raise ValueError(f"Unknown model: {args.model}")
+    training(model)
