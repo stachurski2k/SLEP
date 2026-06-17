@@ -1,4 +1,6 @@
 import os
+os.environ['PYTHONHASHSEED'] = '42'
+os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
 import random
 import numpy as np
 import torch
@@ -80,12 +82,20 @@ def format_dists(dists):
         f"d_neg={dists['d_neg']:.4f} | "
         f"diff={dists['diff']:.4f}"
     )
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 def training(model_encoder):
     np.random.seed(SEED)
     random.seed(SEED)
     torch.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
 
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -121,17 +131,20 @@ def training(model_encoder):
     train_sampler = BalancedBatchSampler(train_ds.labels, P=P_TRAIN, K=K_TRAIN)
     val_sampler   = BalancedBatchSampler(val_ds.labels,   P=P_VAL,   K=K_VAL)
 
+    g = torch.Generator()
+    g.manual_seed(SEED)
+    
     train_loader = DataLoader(
-        train_ds, batch_sampler=train_sampler, num_workers=0, pin_memory=True
+        train_ds, batch_sampler=train_sampler, num_workers=0, pin_memory=True, worker_init_fn=seed_worker, generator=g
     )
     val_loader = DataLoader(
-        val_ds, batch_sampler=val_sampler, num_workers=0, pin_memory=True
+        val_ds, batch_sampler=val_sampler, num_workers=0, pin_memory=True, worker_init_fn=seed_worker, generator=g
     )
     train_eval_loader = DataLoader(
-        train_eval_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=True
+        train_eval_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=True, worker_init_fn=seed_worker, generator=g
     )
     val_eval_loader = DataLoader(
-        val_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=True
+        val_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=True, worker_init_fn=seed_worker, generator=g
     )
 
     # ── MODEL ─────────────────────────────────────────────────────────────

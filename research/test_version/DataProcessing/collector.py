@@ -1,9 +1,12 @@
 import os
 from pathlib import Path
-
+os.environ["TF_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["GLOG_minloglevel"] = "2"
 os.environ["ABSL_LOGGING_MIN_LEVEL"] = "2"
+
 
 import cv2
 import mediapipe as mp
