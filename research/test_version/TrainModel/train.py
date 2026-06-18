@@ -394,14 +394,14 @@ if __name__ == "__main__":
     args = argparse.ArgumentParser()
     args.add_argument("--model", type=str, default="transformer")
     args = args.parse_args()
-    from Models.Transformer_encoder import TransformerEncoder_model
+    from Models.Transformer_encoder import TransformerEncoder
     from Models.LSTM_encoder import LSTMEncoder
     from Models.BiLSTM_encoder import BiLSTMEncoder
     from Models.GRU_encoder import GRUEncoder
     from Models.BiGRU_encoder import BiGRUEncoder
     
     if args.model == "transformer":
-        model = TransformerEncoder_model
+        model = TransformerEncoder
     elif args.model == "lstm":
         model = LSTMEncoder
     elif args.model == "bilstm":
