@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000'
+const API_BASE_URL = `http://${window.location.hostname}:5000`
 
 export type Dataset = {
   id: number
@@ -148,24 +148,32 @@ export function createImportVideoJob(payload: ImportVideoJobPayload) {
   })
 }
 
-export function getUploadUrl(payload: UploadUrlPayload) {
-  return requestJson<UploadUrlResponse>('/api/v1/s3/upload-url', {
+export async function getUploadUrl(payload: UploadUrlPayload) {
+  const response = await requestJson<UploadUrlResponse>('/api/v1/s3/upload-url', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   })
+  if (response.url) {
+    response.url = response.url.replace('//localhost:', `//${window.location.hostname}:`)
+  }
+  return response
 }
 
-export function getDownloadUrl(payload: DownloadUrlPayload) {
-  return requestJson<DownloadUrlResponse>('/api/v1/s3/download-url', {
+export async function getDownloadUrl(payload: DownloadUrlPayload) {
+  const response = await requestJson<DownloadUrlResponse>('/api/v1/s3/download-url', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   })
+  if (response.url) {
+    response.url = response.url.replace('//localhost:', `//${window.location.hostname}:`)
+  }
+  return response
 }
 
 export async function uploadFileToSignedUrl(
