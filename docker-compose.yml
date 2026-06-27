@@ -90,8 +90,6 @@ services:
       - slep-network
     depends_on:
       - redis
-    volumes:
-      - ./src/data-collection-backend/tmp:/tmp-dir
     command: celery -A app.workers.celery_app worker --loglevel=info
     
   data-collection-flower:  # optional: Worker monitoring UI
