@@ -149,31 +149,23 @@ export function createImportVideoJob(payload: ImportVideoJobPayload) {
 }
 
 export async function getUploadUrl(payload: UploadUrlPayload) {
-  const response = await requestJson<UploadUrlResponse>('/api/v1/s3/upload-url', {
+  return requestJson<UploadUrlResponse>('/api/v1/s3/upload-url', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   })
-  if (response.url) {
-    response.url = response.url.replace('//localhost:', `//${window.location.hostname}:`)
-  }
-  return response
 }
 
 export async function getDownloadUrl(payload: DownloadUrlPayload) {
-  const response = await requestJson<DownloadUrlResponse>('/api/v1/s3/download-url', {
+  return requestJson<DownloadUrlResponse>('/api/v1/s3/download-url', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   })
-  if (response.url) {
-    response.url = response.url.replace('//localhost:', `//${window.location.hostname}:`)
-  }
-  return response
 }
 
 export async function uploadFileToSignedUrl(

@@ -124,7 +124,7 @@ class S3Service:
             logger.error(f"Failed to download {s3_key} as bytes: {e}")
             raise
 
-    def get_upload_url(self, s3_key: str, content_type: str, expires_in: int = 3600) -> dict:
+    def get_upload_url(self, s3_key: str, content_type: str, expires_in: int = 3600, host: str = None) -> dict:
         """
         Generate a presigned URL for direct client-to-S3 upload.
         A random hex prefix is prepended to the filename to avoid collisions.
@@ -136,8 +136,20 @@ class S3Service:
         filename = os.path.basename(s3_key)
         prefixed_key = f"{directory}/{prefix}_{filename}" if directory else f"{prefix}_{filename}"
 
+        client = self._presign_client
+        if host:
+            _cfg = Config(signature_version="s3v4", s3={"addressing_style": "path"})
+            client = boto3.client(
+                "s3",
+                endpoint_url=f"http://{host}:9000",
+                region_name="us-east-1",
+                aws_access_key_id=config.s3_user,
+                aws_secret_access_key=config.s3_password,
+                config=_cfg,
+            )
+
         try:
-            url = self._presign_client.generate_presigned_url(
+            url = client.generate_presigned_url(
                 ClientMethod="put_object",
                 Params={
                     "Bucket": self.bucket,
@@ -156,12 +168,24 @@ class S3Service:
             logger.error(f"Failed to generate presigned URL for {s3_key}: {e}")
             raise
 
-    def get_download_url(self, s3_key: str, expires_in: int = 3600) -> str:
+    def get_download_url(self, s3_key: str, expires_in: int = 3600, host: str = None) -> str:
         """
         Generate a presigned URL for temporary public download access.
         """
+        client = self._presign_client
+        if host:
+            _cfg = Config(signature_version="s3v4", s3={"addressing_style": "path"})
+            client = boto3.client(
+                "s3",
+                endpoint_url=f"http://{host}:9000",
+                region_name="us-east-1",
+                aws_access_key_id=config.s3_user,
+                aws_secret_access_key=config.s3_password,
+                config=_cfg,
+            )
+            
         try:
-            url = self._presign_client.generate_presigned_url(
+            url = client.generate_presigned_url(
                 ClientMethod="get_object",
                 Params={"Bucket": self.bucket, "Key": s3_key},
                 ExpiresIn=expires_in,
