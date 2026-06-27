@@ -4,6 +4,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - 6379:6379
     volumes:
@@ -16,6 +17,7 @@ services:
     image: minio/minio
     container_name: s3
     hostname: s3
+    restart: unless-stopped
     ports:
       - 9000:9000 #S3 API
       - 9001:9001 #Web
@@ -32,6 +34,7 @@ services:
     image: minio/minio
     container_name: s3-dev
     hostname: s3
+    restart: unless-stopped
     ports:
       - 9000:9000 #S3 API
       - 9001:9001 #Web
@@ -64,6 +67,7 @@ services:
     build:
       context: ./src/data-collection-backend
     container_name: data-collection-api
+    restart: unless-stopped
     ports:
       - 5000:5000
     environment:
@@ -78,6 +82,7 @@ services:
     build:
       context: ./src/data-collection-backend
     container_name: data-collection-worker
+    restart: unless-stopped
     environment:
       - UV_ENVIRONMENT=Development
     networks:
@@ -103,6 +108,7 @@ services:
     container_name: data-collection-frontend
     build:
       context: ./src/data-collection-frontend
+    restart: unless-stopped
     ports:
       - 3000:80
     depends_on:
