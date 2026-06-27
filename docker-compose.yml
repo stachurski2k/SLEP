@@ -76,7 +76,8 @@ services:
       - slep-network
     depends_on:
       - redis
-    command: uvicorn app.main:app --host 0.0.0.0 --port 5000 
+      - postgres
+    command: bash -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 5000"
 
   data-collection-worker:
     build:
