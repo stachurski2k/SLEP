@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASL Gloss Translator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="container glass-panel">
+        <header>
+            <h1>ASL Translator</h1>
+            <p>Translate between English text and ASL glosses powered by Gemini AI</p>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tab-btn active" data-mode="text2gloss">Text ➔ Glosses</button>
+                <button class="tab-btn" data-mode="gloss2text">Glosses ➔ Text</button>
+            </div>
+
+            <div class="editor-area">
+                <div class="input-group">
+                    <label id="input-label" for="input-text">English (Text)</label>
+                    <textarea id="input-text" placeholder="Type your text here... e.g. I want to learn sign language."></textarea>
+                </div>
+
+                <div class="actions">
+                    <button id="translate-btn" class="primary-btn">
+                        <span class="btn-text">Translate</span>
+                        <div class="spinner hidden"></div>
+                    </button>
+                </div>
+
+                <div class="input-group">
+                    <label id="output-label" for="output-text">American Sign Language (Glossy)</label>
+                    <textarea id="output-text" readonly placeholder="Result will appear here..."></textarea>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

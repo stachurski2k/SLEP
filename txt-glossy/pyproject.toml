@@ -1,0 +1,13 @@
+[project]
+name = "txt-glossy"
+version = "0.1.0"
+description = "Translation between ASL Glosses and English Text using LLM"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "langchain>=0.2.0",
+    "langchain-google-genai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0"
+]
