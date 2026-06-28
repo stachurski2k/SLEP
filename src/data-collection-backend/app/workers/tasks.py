@@ -168,35 +168,42 @@ def export_dataset_task(self, job_id: int):
             local_npy_temp_path = os.path.join(temp_dir, f"video_{video.id}_raw.npy")
             try:
                 s3_service.download(s3_key, local_npy_temp_path)
-                landmarks_array = np.load(local_npy_temp_path)
+                # Load with memory mapping to avoid high RAM usage
+                landmarks_array = np.load(local_npy_temp_path, mmap_mode='r')
+                
+                # Slice and save each clip
+                if video.clips:
+                    for clip in video.clips:
+                        start = clip.start_frame_index
+                        end = clip.end_frame_index
+                        
+                        # Bound checking
+                        if start < 0:
+                            start = 0
+                        if end >= len(landmarks_array):
+                            end = len(landmarks_array) - 1
+                        
+                        # Force in-memory array copy to release the memmap handle after slicing
+                        clip_landmarks = np.array(landmarks_array[start : end + 1])
+                        clip_filename = f"{clip.gesture_class_id}_{video.id}_{clip.id}.npy"
+                        clip_filepath = os.path.join(temp_dir, clip_filename)
+                        np.save(clip_filepath, clip_landmarks)
+                        exported_clips_count += 1
+                else:
+                    logger.info(f"Video {video.id} has no clips. Skipping exporting as no gesture label is present.")
+                
+                # Release memory mapped file handle explicitly
+                if hasattr(landmarks_array, '_mmap') and landmarks_array._mmap is not None:
+                    landmarks_array._mmap.close()
+                del landmarks_array
             except Exception as e:
                 logger.error(f"Failed to process landmarks for video {video.id}: {e}")
-                if os.path.exists(local_npy_temp_path):
-                    os.remove(local_npy_temp_path)
-                continue
             finally:
                 if os.path.exists(local_npy_temp_path):
-                    os.remove(local_npy_temp_path)
-
-            # Slice and save each clip
-            if video.clips:
-                for clip in video.clips:
-                    start = clip.start_frame_index
-                    end = clip.end_frame_index
-                    
-                    # Bound checking
-                    if start < 0:
-                        start = 0
-                    if end >= len(landmarks_array):
-                        end = len(landmarks_array) - 1
-                    
-                    clip_landmarks = landmarks_array[start : end + 1]
-                    clip_filename = f"{clip.gesture_class_id}_{video.id}_{clip.id}.npy"
-                    clip_filepath = os.path.join(temp_dir, clip_filename)
-                    np.save(clip_filepath, clip_landmarks)
-                    exported_clips_count += 1
-            else:
-                logger.info(f"Video {video.id} has no clips. Skipping exporting as no gesture label is present.")
+                    try:
+                        os.remove(local_npy_temp_path)
+                    except Exception as e:
+                        logger.warning(f"Could not remove temporary file {local_npy_temp_path}: {e}")
 
         if exported_clips_count == 0:
             raise ValueError("No clips were exported. The dataset is empty or videos have no clips.")

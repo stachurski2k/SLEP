@@ -28,14 +28,30 @@ def download_and_extract_dataset(dataset_id: int,
         dest_dir = Path(__file__).parent.parent / "data" / f"dataset_{dataset_id}"
     dest_path = Path(dest_dir)
     
-    # 1. Look for an existing exported dataset for this dataset ID
+    # 1. Look for an existing exported dataset for this dataset ID and verify its validity
     print(f"Checking for existing exports of dataset {dataset_id}...")
     try:
+        # Fetch current video count from backend to validate the export cache
+        try:
+            req_videos = urllib.request.Request(f"{backend_url}/api/v1/videos/?dataset_id={dataset_id}&limit=1000")
+            with urllib.request.urlopen(req_videos) as response:
+                current_videos = json.loads(response.read().decode())
+            current_videos_count = len(current_videos)
+        except Exception as ve:
+            print(f"Failed to fetch current video count from backend: {ve}. Cache validation will be bypassed.")
+            current_videos_count = None
+
         req = urllib.request.Request(f"{backend_url}/api/v1/exported-datasets/?limit=100")
         with urllib.request.urlopen(req) as response:
             exports = json.loads(response.read().decode())
         
-        matching_exports = [e for e in exports if e.get("original_dataset_id") == dataset_id]
+        if current_videos_count is not None:
+            matching_exports = [
+                e for e in exports 
+                if e.get("original_dataset_id") == dataset_id and e.get("videos_count") == current_videos_count
+            ]
+        else:
+            matching_exports = [e for e in exports if e.get("original_dataset_id") == dataset_id]
     except Exception as e:
         print(f"Failed to query exported datasets: {e}. Will attempt to trigger new job.")
         matching_exports = []
@@ -48,7 +64,7 @@ def download_and_extract_dataset(dataset_id: int,
         print(f"Found existing exported dataset ID: {exported_dataset_id} (S3 Key: {s3_key})")
     else:
         # 2. Trigger a new export job
-        print(f"No existing exports found. Triggering new export job for dataset {dataset_id}...")
+        print(f"No existing exports found (or cache was stale). Triggering new export job for dataset {dataset_id}...")
         post_data = json.dumps({"original_dataset_id": dataset_id}).encode('utf-8')
         req = urllib.request.Request(
             f"{backend_url}/api/v1/export-dataset-jobs/",
@@ -61,8 +77,10 @@ def download_and_extract_dataset(dataset_id: int,
         job_id = job["id"]
         print(f"Export job triggered. Job ID: {job_id}. Polling status...")
         
-        # 3. Poll job status until done
-        while True:
+        # 3. Poll job status until done (with a timeout of 5 minutes)
+        max_retries = 150
+        retry_count = 0
+        while retry_count < max_retries:
             poll_req = urllib.request.Request(f"{backend_url}/api/v1/export-dataset-jobs/{job_id}")
             with urllib.request.urlopen(poll_req) as response:
                 job_status = json.loads(response.read().decode())
@@ -76,8 +94,11 @@ def download_and_extract_dataset(dataset_id: int,
                 raise RuntimeError(f"Export dataset job failed: {job_status.get('error_message')}")
             elif status in ("in_queue", "processing"):
                 time.sleep(2)
+                retry_count += 1
             else:
                 raise RuntimeError(f"Unexpected job status: {status}")
+        else:
+            raise TimeoutError(f"Export dataset job {job_id} timed out after {max_retries * 2} seconds.")
         
         req = urllib.request.Request(f"{backend_url}/api/v1/exported-datasets/{exported_dataset_id}")
         with urllib.request.urlopen(req) as response:

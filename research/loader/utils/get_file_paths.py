@@ -27,8 +27,10 @@ def get_file_paths(data_dir: Union[str, Path], zero_indexed: bool = True) -> Tup
         except (IndexError, ValueError):
             raise ValueError(f"Can't parse label from : {path.name}")
 
-    # Dostosowanie do indeksowania od 0 (jeśli najniższa etykieta to 1)
-    if zero_indexed and min(labels) == 1:
-        labels = [lbl - 1 for lbl in labels]
+    # Dostosowanie do indeksowania od 0 (ciągłe indeksy 0..N-1 dla PyTorcha)
+    if zero_indexed and labels:
+        unique_labels = sorted(list(set(labels)))
+        label_to_idx = {lbl: idx for idx, lbl in enumerate(unique_labels)}
+        labels = [label_to_idx[lbl] for lbl in labels]
 
     return file_paths, labels
