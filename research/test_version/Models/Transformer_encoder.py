@@ -66,5 +66,5 @@ class TransformerEncoder(nn.Module):
         pooled = sequence.mean(dim=1)  
         embedding = self.embedding_head(pooled)  
 
-        return reconstructed, embedding
+        return embedding, reconstructed
 

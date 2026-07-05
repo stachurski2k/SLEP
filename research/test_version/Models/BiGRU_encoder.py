@@ -41,4 +41,4 @@ class BiGRUEncoder(nn.Module):
 
         reconstructed = self.decoder(output)
 
-        return reconstructed, embedding
+        return embedding, reconstructed

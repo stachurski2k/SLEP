@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from pytorch_metric_learning import losses
 from torch.utils.data import DataLoader
 from torch.optim.swa_utils import AveragedModel
+from Recognition.faiss_dtw import build_faiss_index
 from DataProcessing.data_split import GestureDataset, build_splits
 from DataProcessing.augmentation import SequenceAugmentor
 from TrainModel.balanced_sampler import BalancedBatchSampler
@@ -197,7 +198,7 @@ def training(model_encoder):
             seq    = seq.to(DEVICE)
             labels = labels.to(DEVICE)
 
-            reconstructed, embedding = model(seq)
+            embedding, reconstructed = model(seq)
 
             embeddings = F.normalize(embedding, dim=1)
 
@@ -231,10 +232,9 @@ def training(model_encoder):
                 seq    = seq.to(DEVICE)
                 labels = labels.to(DEVICE)
 
-                reconstructed, last_state = current_eval_model(seq)
-
-                last_state = F.normalize(last_state, p=2, dim=1)
-                loss_ms = criterion(last_state, labels)
+                embedding, reconstructed = current_eval_model(seq)
+                embedding = F.normalize(embedding, p=2, dim=1)
+                loss_ms = criterion(embedding, labels)
                 rec_loss = F.mse_loss(reconstructed, seq)
                 loss = loss_ms + 0.25 * rec_loss
 
@@ -321,6 +321,22 @@ def training(model_encoder):
                 current_eval_model, val_ds, val_paths,
                 label_map, DEVICE, val_embeddings_file, normalize=NORMALIZE_EMBEDDINGS
             )
+
+            # ── BUILD FAISS INDEX ─────────────────────────────────────────────
+            faiss_db_dir = os.path.join("Recognition", f"{model_name}_db")
+            os.makedirs(faiss_db_dir, exist_ok=True)
+            faiss_index_path  = os.path.join(faiss_db_dir, "index.faiss")
+            faiss_labels_path = os.path.join(faiss_db_dir, "index_labels.npz")
+            train_data = np.load(train_embeddings_file)
+            build_faiss_index(train_data["embeddings"], save_path=faiss_index_path)
+            id_to_label = np.array(
+                [lbl for lbl, _ in sorted(label_map.items(), key=lambda item: item[1])]
+            )
+            np.savez(
+                faiss_labels_path,
+                labels=train_data["labels"],
+                id_to_label=id_to_label,
+            )
             saved = "  <- best"
 
         # ── EMBEDDING DISTANCES  ─────────────────────────────────────────────
@@ -378,6 +394,7 @@ def training(model_encoder):
             print("-" * 90 + "\n")
             break
 
+
     print("\n" + "-" * 90)
     print("Training completed")
     print(f"\nBest epoch:         {best_epoch}")
@@ -394,14 +411,14 @@ if __name__ == "__main__":
     args = argparse.ArgumentParser()
     args.add_argument("--model", type=str, default="transformer")
     args = args.parse_args()
-    from Models.Transformer_encoder import TransformerEncoder
+    from Models.Transformer_encoder import TransformerEncoder_model
     from Models.LSTM_encoder import LSTMEncoder
     from Models.BiLSTM_encoder import BiLSTMEncoder
     from Models.GRU_encoder import GRUEncoder
     from Models.BiGRU_encoder import BiGRUEncoder
     
     if args.model == "transformer":
-        model = TransformerEncoder
+        model = TransformerEncoder_model
     elif args.model == "lstm":
         model = LSTMEncoder
     elif args.model == "bilstm":

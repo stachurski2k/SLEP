@@ -42,4 +42,4 @@ class LSTMEncoder(nn.Module):
 
         reconstructed = self.decoder(output)
 
-        return reconstructed, embedding
+        return embedding, reconstructed

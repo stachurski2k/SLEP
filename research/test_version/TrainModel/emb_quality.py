@@ -28,7 +28,7 @@ def embedding_distances(model, loader, device):
 
     with torch.no_grad():
         for sequences, labels in loader:
-            embeddings = model(sequences.to(device))[1]
+            embeddings = model(sequences.to(device))[0]
             embeddings = F.normalize(embeddings, p=2, dim=1)
 
             d_pos, d_neg = distance_stats(pairwise_distances(embeddings), labels.to(device))

@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -41,11 +42,22 @@ def _atomic_write_path(path):
     return tmp_file.name
 
 
+def _robust_replace(src, dst, max_retries=10, delay=0.5):
+    for i in range(max_retries):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if i == max_retries - 1:
+                raise
+            time.sleep(delay)
+
+
 def atomic_torch_save(payload, path):
     tmp_path = _atomic_write_path(path)
     try:
         torch.save(payload, tmp_path)
-        os.replace(tmp_path, path)
+        _robust_replace(tmp_path, path)
     except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -57,7 +69,7 @@ def atomic_np_savez(path, **arrays):
     try:
         with open(tmp_path, "wb") as file:
             np.savez(file, **arrays)
-        os.replace(tmp_path, path)
+        _robust_replace(tmp_path, path)
     except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -67,24 +79,24 @@ def atomic_np_savez(path, **arrays):
 def get_embeddings(model, loader, device, normalize=True):
     model.eval()
 
-    all_last_embeddings = []
-    all_seq_embeddings = []
+    all_embeddings = []
+    all_seq = []
     all_labels = []
 
     with torch.no_grad():
         for seq, labels in loader:
             seq = seq.to(device)
 
-            seq_embeddings, last_embeddings = model(seq)
+            embedding, reconstructed = model(seq)
 
             if normalize:
-                last_embeddings = F.normalize(last_embeddings, p=2, dim=1)
+                embedding = F.normalize(embedding, p=2, dim=1)
 
-            all_last_embeddings.append(last_embeddings.cpu().numpy())
-            all_seq_embeddings.append(seq_embeddings.cpu().numpy())
+            all_embeddings.append(embedding.cpu().numpy())
+            all_seq.append(reconstructed.cpu().numpy())
             all_labels.append(labels.numpy())
 
-    return np.concatenate(all_last_embeddings), np.concatenate(all_seq_embeddings), np.concatenate(all_labels)
+    return np.concatenate(all_embeddings), np.concatenate(all_seq), np.concatenate(all_labels)
 
 
 def save_embeddings(model, dataset, paths_with_labels, label_map, device, save_path, normalize=True):
@@ -96,7 +108,7 @@ def save_embeddings(model, dataset, paths_with_labels, label_map, device, save_p
         pin_memory=torch.cuda.is_available(),
     )
 
-    last_embeddings, seq_embeddings, labels = get_embeddings(model, reference_loader, device, normalize=normalize)
+    embeddings, sequence, labels = get_embeddings(model, reference_loader, device, normalize=normalize)
     paths = np.array([path for path, _ in paths_with_labels])
     label_names = np.array([label for _, label in paths_with_labels])
     id_to_label = np.array(
@@ -105,8 +117,8 @@ def save_embeddings(model, dataset, paths_with_labels, label_map, device, save_p
 
     atomic_np_savez(
         save_path,
-        last_embeddings=last_embeddings.astype(np.float32),
-        seq_embeddings=seq_embeddings.astype(np.float32),
+        embeddings=embeddings.astype(np.float32),
+        sequence=sequence.astype(np.float32),
         labels=labels.astype(np.int64),
         paths=paths,
         label_names=label_names,
