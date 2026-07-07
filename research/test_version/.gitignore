@@ -226,7 +226,18 @@ Dataset_test/
 Features/
 Features_test/
 
+Models/LSTMEncoder_Checkpoints/
+Models/BiLSTMEncoder_Checkpoints/
+Models/GRUEncoder_Checkpoints/
+Models/BiGRUEncoder_Checkpoints/
+Models/TransformerEncoder_Checkpoints/
+
+Recognition/BiLSTMEncoder_db/
+Recognition/LSTMEncoder_db/
+Recognition/BiGRUEncoder_db/
+Recognition/GRUEncoder_db/
+Recognition/TransformerEncoder_db/
+
 MediapipeModels/
 
 diagnose_video_result.txt
-
