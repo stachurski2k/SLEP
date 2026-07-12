@@ -1,0 +1,87 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Chapter 8: Conclusions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Conclusions}
+\label{chap:conclusions}
+
+\subsection{Answers to thesis goals}
+\label{sec:conclusions-goals}
+
+Section~\ref{sec:goals-scope} set out five goals for this project. Two of them
+are addressed in full by the work presented in this thesis, and three remain
+open at the time of writing.
+
+The annotation platform goal is met by the system described in
+Chapter~\ref{chap:annotation-platform}: a working, decentralized data
+collection application supporting dataset, video, gesture class, and gesture
+type management, asynchronous MediaPipe-based landmark extraction, and a
+browser-based clip annotation editor, all deployable locally through Docker
+Compose.
+
+The isolated video-to-gloss recognition goal is met by the system described in
+Chapter~\ref{chap:isolated-gloss-recognition}: a retrieval-based, multi-objective
+architecture benchmarked across five temporal encoders on a 32-gloss subset of
+the ASL Citizen dataset, with the Transformer encoder achieving 90.75\% 1-NN
+accuracy and per-class recall exceeding 0.75 across all evaluated glosses.
+
+\todo{PLACEHOLDER: Once Chapters~\ref{chap:text-translation},
+\ref{chap:sentence-level-translation}, and~\ref{chap:educational-platform} are
+completed, summarise here how (and how well) each of the remaining goals --
+gloss-text translation in both directions, end-to-end sentence-level
+translation, and the educational demonstration platform -- was met, with
+reference to their respective results sections.}
+
+\subsection{Limitations}
+\label{sec:conclusions-limitations}
+
+The isolated gloss recognition system's principal limitation, identified
+through confusion-matrix analysis, per-class recall, t-SNE visualisation, and
+positive/negative pair distance tracking
+(Section~\ref{sec:gloss-recognition-discussion}), is intra-class variability
+arising from signer-dependent execution differences: unseen signers produce
+more dispersed embeddings than seen signers, even though the overall cluster
+structure generalises. The benchmark is also currently limited to a 32-gloss
+vocabulary subset of ASL Citizen, and to isolated, pre-segmented gestures rather
+than continuous signing.
+
+The annotation platform's known limitations
+(Section~\ref{sec:annotation-system-architecture}) include incomplete dataset
+export processing, video metadata (FPS, duration) not yet fully derived from
+uploaded files, no authentication or authorisation, limited validation around
+clip ranges and dataset consistency, and limited automated test coverage.
+
+\todo{PLACEHOLDER: Once Chapters~\ref{chap:text-translation},
+\ref{chap:sentence-level-translation}, and~\ref{chap:educational-platform} are
+completed, add their specific limitations here (e.g.\ gloss-text corpus size
+and coverage, end-to-end error propagation between recognition and translation
+stages, educational platform usability constraints).}
+
+\subsection{Future work}
+\label{sec:conclusions-future-work}
+
+Several concrete extensions to the isolated gloss recognition system are
+identified in Section~\ref{sec:gloss-recognition-discussion}: replacing or
+augmenting the KNN classifier with Dynamic Time Warping (DTW)-based sequence
+alignment at retrieval time; replacing the MSE reconstruction loss with
+soft-DTW as a differentiable training objective; adopting FAISS for scalable
+approximate nearest-neighbour retrieval beyond the current 32-gloss benchmark;
+introducing Graph Convolutional Networks to encode the skeletal graph topology
+explicitly rather than relying on flattened landmark vectors; evaluating
+quaternion-valued LSTMs for rotation-aware temporal encoding; and extending the
+system from isolated to continuous recognition via CTC, forming the basis of
+the sentence-level pipeline in Chapter~\ref{chap:sentence-level-translation}.
+Notably, a live webcam recognition demo combining the Transformer encoder with
+FAISS retrieval has already been implemented in the project repository since
+this thesis's research report was written, ahead of some of the above being
+formally written up.
+
+For the annotation platform, future work should complete the dataset export
+processing pipeline, strengthen import/export job status tracking, derive video
+metadata directly from uploaded files rather than using fixed values, add
+authentication and authorisation, and broaden automated test coverage across
+the API, worker, and frontend editor.
+
+\todo{PLACEHOLDER: Once Chapters~\ref{chap:text-translation},
+\ref{chap:sentence-level-translation}, and~\ref{chap:educational-platform} are
+completed, add their future work items here.}

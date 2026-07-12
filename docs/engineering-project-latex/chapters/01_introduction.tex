@@ -1,0 +1,103 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Chapter 1: Introduction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+\label{chap:introduction}
+
+\subsection{Motivation and context}
+\label{sec:motivation-context}
+
+Sign languages are fully-fledged natural languages, possessing their own lexicons,
+grammars, and morphosyntactic structures that are independent of the spoken
+languages with which they coexist. Contrary to common assumption, they are neither
+universal nor manual transliterations of speech: American Sign Language (ASL),
+British Sign Language (BSL), German Sign Language (DGS), and Polish Sign Language
+(PJM) are mutually unintelligible, and the grammar of a sign language frequently
+bears no resemblance to that of the surrounding spoken language. ASL, for instance,
+does not follow English word order, and conveys grammatical information --
+negation, interrogation, conditionality -- through non-manual markers such as
+facial expression, head position, and eye gaze, in parallel with the manual
+articulation of signs. For the Deaf and hard-of-hearing communities for whom a
+sign language is the primary language, this independence creates a genuine
+communication barrier with the hearing majority, and motivates the development of
+automatic sign language translation systems.
+
+Automatic sign language translation is not a single task but a family of
+interrelated sub-problems. Translation between a spoken language and a sign
+language may proceed in either direction, and is conventionally decomposed around
+an intermediate symbolic representation known as a \emph{gloss}. A gloss is a
+written transcription of a sign sequence, typically rendered as capitalised words
+of a spoken language, that records which signs are produced and in what order
+while abstracting away their visual realisation. For example, the DGS utterance
+glossed as ICH OSTERN WETTER ZUFRIEDEN corresponds to the fluent German sentence
+``Da k\"onnen wir mit unserem Osterwetter eigentlich ganz zufrieden sein'' --
+demonstrating that the gloss is a compact, lossy intermediate rather than a
+complete translation. This decomposition yields four directed sub-tasks:
+video-to-gloss and gloss-to-text on the recognition side, and text-to-gloss and
+avatar-based gloss-to-video on the production side. These sub-tasks, and how the
+present project positions itself among them, are discussed in more detail in
+Chapter~\ref{chap:related-work}.
+
+In view of the limited annotated data resources available for sign language
+research, and the practical need for tooling to collect and label such data, this
+project combines a research track and a development track. The research track
+targets the video-to-gloss recognition problem and its extension towards
+continuous, sentence-level translation. The development track builds the
+supporting software infrastructure -- a data annotation platform and an
+educational demonstration platform -- required to collect training data and to
+present the resulting models to end users.
+
+\subsection{Goals and scope}
+\label{sec:goals-scope}
+
+The main objective of this project is to research, develop, and implement methods
+for translating sign language into written or spoken language, and to build the
+surrounding software systems that make this research reproducible and usable. In
+view of the limited data resources available on the market, the project
+concentrates on both the research problem itself and on producing a comprehensive
+system with tangible practical and scientific value. Concretely, the project
+pursues the following goals:
+
+\begin{itemize}
+  \item design and implement a decentralized data annotation platform for
+        collecting and labelling sign language video datasets;
+  \item formulate and evaluate a video-to-gloss recognition model for isolated
+        sign gestures, benchmarking multiple temporal encoder architectures under
+        identical experimental conditions;
+  \item investigate translation between gloss sequences and natural-language
+        text in both directions (gloss-to-text and text-to-gloss);
+  \item integrate the isolated recognition and translation components into an
+        end-to-end, sentence-level video-to-text pipeline;
+  \item deliver an educational platform that demonstrates the trained models to
+        end users through an accessible interface.
+\end{itemize}
+
+\todo{PLACEHOLDER: State the precise scope boundaries of the thesis -- which sign
+language(s) and dataset(s) are targeted, what is explicitly out of scope (e.g.
+continuous/real-time translation, multi-signer deployment, avatar-based
+production), and any constraints inherited from the source data (e.g. isolated,
+pre-segmented gestures only).}
+
+\subsection{Thesis structure}
+\label{sec:thesis-structure}
+
+The remainder of this thesis is organised as follows.
+Chapter~\ref{chap:related-work} surveys prior work in sign language recognition
+and translation, covering video-to-gloss methods, NLP models applied to sign
+language, and existing systems and benchmarks.
+Chapter~\ref{chap:annotation-platform} describes the annotation platform built to
+collect and label the video datasets used throughout this work.
+Chapter~\ref{chap:isolated-gloss-recognition} presents the isolated gloss
+recognition (video-to-gloss) model, including the dataset, preprocessing
+pipeline, model architecture, and experimental results.
+Chapter~\ref{chap:text-translation} addresses translation between gloss
+sequences and natural-language text.
+Chapter~\ref{chap:sentence-level-translation} integrates the components from
+Chapters~\ref{chap:isolated-gloss-recognition} and~\ref{chap:text-translation}
+into an end-to-end, sentence-level video-to-text pipeline.
+Chapter~\ref{chap:educational-platform} presents the educational platform that
+demonstrates the resulting models to end users.
+Finally, Chapter~\ref{chap:conclusions} answers the goals set out above,
+discusses the limitations of the present system, and outlines directions for
+future work.

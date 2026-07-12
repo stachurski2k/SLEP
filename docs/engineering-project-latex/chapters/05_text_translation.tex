@@ -1,0 +1,48 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Chapter 5: Text Translation (gloss2text / text2gloss)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Text Translation (gloss2text / text2gloss)}
+\label{chap:text-translation}
+
+Chapter~\ref{chap:isolated-gloss-recognition} addressed the video-to-gloss
+stage of the pipeline introduced in
+Section~\ref{sec:motivation-context}: converting a segmented sign video into a
+gloss label. This chapter addresses the remaining symbolic-to-natural-language
+step, translating between gloss sequences and natural-language text in both
+directions -- gloss-to-text and text-to-gloss -- so that the recognised gloss
+sequences can be rendered as fluent sentences, and so that the reverse direction
+can be used for data augmentation and evaluation.
+
+\todo{PLACEHOLDER: This chapter is not yet covered by the project's existing
+research and development reports and needs to be written once the
+gloss-text translation experiments are conducted. The subsections below outline
+the expected structure.}
+
+\subsection{Approach and data}
+\label{sec:text-translation-approach-data}
+
+\todo{PLACEHOLDER: Describe the parallel gloss-text corpus (or corpora) used for
+training and evaluation, how gloss sequences are derived from the
+video-to-gloss output of Chapter~\ref{chap:isolated-gloss-recognition} or from
+existing annotated corpora, any data cleaning/normalisation applied to gloss and
+text sequences, and the train/validation/test split methodology.}
+
+\subsection{Model and training}
+\label{sec:text-translation-model-training}
+
+\todo{PLACEHOLDER: Describe the sequence-to-sequence architecture used for
+gloss2text and text2gloss translation (e.g.\ Transformer encoder-decoder,
+pretrained language model fine-tuning), tokenisation strategy for gloss tokens,
+training objective, optimiser, and hyperparameters. Relate architectural choices
+back to the NLP models surveyed in Section~\ref{sec:nlp-models-sign-language}.}
+
+\subsection{Evaluation (both directions)}
+\label{sec:text-translation-evaluation}
+
+\todo{PLACEHOLDER: Report quantitative results for both gloss-to-text and
+text-to-gloss directions (e.g.\ BLEU, ROUGE, or other machine-translation
+metrics as appropriate), qualitative examples of translated output, and an
+analysis of failure modes. This evaluation will be reused as the text
+translation stage of the end-to-end pipeline evaluated in
+Chapter~\ref{chap:sentence-level-translation}.}

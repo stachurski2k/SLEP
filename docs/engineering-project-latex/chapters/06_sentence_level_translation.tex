@@ -1,0 +1,57 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Chapter 6: Sentence-level Translation (video2text)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Sentence-level Translation (video2text)}
+\label{chap:sentence-level-translation}
+
+Chapters~\ref{chap:isolated-gloss-recognition} and~\ref{chap:text-translation}
+address, respectively, isolated video-to-gloss recognition and gloss-text
+translation, each operating on a single, pre-segmented gloss or a short gloss
+sequence. Practical sign language translation, however, requires processing
+continuous, unsegmented signing sequences in which gloss boundaries are unknown
+and must be inferred jointly with gloss identity. This chapter describes the
+end-to-end pipeline that integrates the two preceding modules into a full
+video-to-text system.
+
+\subsection{End-to-end pipeline}
+\label{sec:sentence-level-pipeline}
+
+We plan to extend the isolated recognition system of
+Chapter~\ref{chap:isolated-gloss-recognition} toward continuous recognition
+using Connectionist Temporal Classification (CTC), a sequence-to-sequence
+training objective that marginalises over all valid alignments between an input
+sequence and an output label sequence of unknown alignment. CTC introduces a
+blank token to model inter-gloss transitions and trains the encoder to emit
+gloss labels at the appropriate temporal positions without requiring
+frame-level annotation. This extension would transform the current isolated
+recognition architecture into a continuous sign language recognition (CSLR)
+pipeline, significantly expanding its practical applicability while retaining
+the learned embedding space of Chapter~\ref{chap:isolated-gloss-recognition} as
+its representational backbone.
+
+\todo{PLACEHOLDER: Describe the concrete end-to-end pipeline architecture once
+implemented: how continuous video is segmented or processed frame-by-frame,
+how the CTC-based (or otherwise) continuous recognition stage produces a gloss
+sequence, and how that sequence is handed off to the gloss-to-text stage of
+Chapter~\ref{chap:text-translation}.}
+
+\subsection{Integration of modules from Chapters~\ref{chap:isolated-gloss-recognition} and~\ref{chap:text-translation}}
+\label{sec:sentence-level-integration}
+
+\todo{PLACEHOLDER: Describe how the isolated gloss recognition model
+(Chapter~\ref{chap:isolated-gloss-recognition}) and the gloss-text translation
+model (Chapter~\ref{chap:text-translation}) are composed into a single
+inference pipeline -- interface between the two modules, handling of
+recognition uncertainty/ambiguity when passed downstream to translation, and
+any joint fine-tuning or error-correction mechanisms between the two stages.}
+
+\subsection{Experiments and results}
+\label{sec:sentence-level-experiments}
+
+\todo{PLACEHOLDER: Report end-to-end evaluation of the full video-to-text
+pipeline on continuous, sentence-level sign language video, including the
+dataset used, end-to-end metrics (e.g.\ Word Error Rate for the recognition
+stage, BLEU for the translation stage, and any combined video-to-text metric),
+and an error analysis distinguishing recognition errors from translation
+errors.}
