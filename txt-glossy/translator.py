@@ -1,13 +1,21 @@
 import os
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 
 load_dotenv()
 
 class GlossTranslator:
     def __init__(self, model_name: str = "gemini-2.5-flash"):
-        self.llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.2)
+        llm_provider = os.getenv("LLM_PROVIDER", "google").lower()
+        
+        if llm_provider == "ollama":
+            ollama_model = os.getenv("OLLAMA_MODEL", "llama3")
+            ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            self.llm = ChatOllama(model=ollama_model, base_url=ollama_base_url, temperature=0.2)
+        else:
+            self.llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.2)
 
         # System prompt for Text -> Glossy
         self.text_to_gloss_prompt = ChatPromptTemplate.from_messages([

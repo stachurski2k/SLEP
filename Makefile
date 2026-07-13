@@ -8,8 +8,10 @@ build:
 	docker compose build
 
 run: 
-	docker compose up s3 data-collection-api data-collection-worker data-collection-flower postgres redis -d
+	docker compose up s3 data-collection-api data-collection-worker data-collection-flower postgres redis ollama txt-glossy -d
 
 run-dev: 
-	docker compose up s3-dev data-collection-api data-collection-worker data-collection-flower postgres redis -d
+	docker compose up s3-dev data-collection-api data-collection-worker data-collection-flower postgres redis ollama txt-glossy -d
 
+setup-ollama: ## Pull the llama3 model into the running ollama container
+	docker compose exec ollama ollama pull llama3

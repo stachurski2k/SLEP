@@ -110,10 +110,34 @@ services:
     networks:
       - slep-network
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - slep-network
+
+  txt-glossy:
+    build:
+      context: ./txt-glossy
+    container_name: txt-glossy
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./txt-glossy/.env
+    networks:
+      - slep-network
+    depends_on:
+      - ollama
+
 volumes:
   postgres-data:
   redis-data:
   s3-data:
+  ollama-data:
 
 networks:
   slep-network:
