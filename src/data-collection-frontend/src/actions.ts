@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`
+const API_BASE_URL = `http://${window.location.hostname}:5000`
 
 export type Dataset = {
   id: number
@@ -148,7 +148,7 @@ export function createImportVideoJob(payload: ImportVideoJobPayload) {
   })
 }
 
-export function getUploadUrl(payload: UploadUrlPayload) {
+export async function getUploadUrl(payload: UploadUrlPayload) {
   return requestJson<UploadUrlResponse>('/api/v1/s3/upload-url', {
     method: 'POST',
     headers: {
@@ -158,7 +158,7 @@ export function getUploadUrl(payload: UploadUrlPayload) {
   })
 }
 
-export function getDownloadUrl(payload: DownloadUrlPayload) {
+export async function getDownloadUrl(payload: DownloadUrlPayload) {
   return requestJson<DownloadUrlResponse>('/api/v1/s3/download-url', {
     method: 'POST',
     headers: {

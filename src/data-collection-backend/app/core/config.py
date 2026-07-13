@@ -18,7 +18,7 @@ class Config(BaseSettings):
     s3_user: str = "minioadmin"
     s3_password: str = "minioadmin"
     s3_bucket: str = "slep-bucket"
-    tmp_dir: str = "/tmp-dir"
+    tmp_dir: str = "/tmp"
 
     @property
     def db_url(self) -> str:
