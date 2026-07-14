@@ -8,7 +8,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnText = translateBtn.querySelector('.btn-text');
     const spinner = translateBtn.querySelector('.spinner');
 
+    const modelIndicator = document.getElementById('model-indicator');
+    const runBenchmarkBtn = document.getElementById('run-benchmark-btn');
+    const benchmarkResults = document.getElementById('benchmark-results');
+    const benchmarkContent = document.getElementById('benchmark-content');
+
     let currentMode = 'text2gloss';
+
+    // Fetch model info
+    fetch('/api/model_info')
+        .then(res => res.json())
+        .then(data => {
+            modelIndicator.textContent = 'Model: ' + (data.model || 'Unknown');
+        })
+        .catch(err => console.error('Error fetching model info:', err));
+
+    // Handle benchmark
+    runBenchmarkBtn.addEventListener('click', async () => {
+        if (benchmarkResults.classList.contains('hidden')) {
+            benchmarkResults.classList.remove('hidden');
+        }
+        benchmarkContent.innerHTML = 'Running benchmark... Please wait (this may take a minute).';
+        runBenchmarkBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/benchmark');
+            const data = await response.json();
+            
+            if (data.error) {
+                benchmarkContent.innerHTML = `<span style="color: #ff6b6b;">Error: ${data.error}</span>`;
+            } else {
+                benchmarkContent.innerHTML = `
+                    <p style="margin:0 0 0.5rem 0;"><strong>Text ➔ Gloss:</strong> BLEU: ${data.text_to_gloss.bleu} | ROUGE-1: ${data.text_to_gloss.rouge1}</p>
+                    <p style="margin:0 0 0.5rem 0;"><strong>Gloss ➔ Text:</strong> BLEU: ${data.gloss_to_text.bleu} | ROUGE-1: ${data.gloss_to_text.rouge1}</p>
+                    <p style="margin:0; font-size: 0.8rem; color: #aaa;">Tested on ${data.sample_count} sample pairs.</p>
+                `;
+            }
+        } catch (error) {
+            console.error('Benchmark error:', error);
+            benchmarkContent.innerHTML = `<span style="color: #ff6b6b;">Failed to fetch benchmark results.</span>`;
+        } finally {
+            runBenchmarkBtn.disabled = false;
+            runBenchmarkBtn.textContent = 'Run Benchmark Again';
+        }
+    });
 
     // Handle Tab Switching
     tabBtns.forEach(btn => {

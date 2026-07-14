@@ -10,5 +10,7 @@ dependencies = [
     "langchain-ollama>=0.1.0",
     "python-dotenv>=1.0.0",
     "fastapi>=0.110.0",
-    "uvicorn>=0.28.0"
+    "uvicorn>=0.28.0",
+    "sacrebleu>=2.4.0",
+    "rouge-score>=0.1.2"
 ]

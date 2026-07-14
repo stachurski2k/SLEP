@@ -27,6 +27,22 @@ Follow the standard ASL glossing conventions:
 3. Skip grammatical words that don't exist in ASL (e.g., articles like "a", "an", "the", forms of the "to be" verb like "is", "are", "am").
 4. Do not use inflection on glosses (no -ed, -ing, -s). Use the base form of the word.
 5. Provide ONLY the final gloss sequence, without any additional explanations or text.
+
+Examples:
+Input: "Next week I will visit my grandmother."
+Output: NEXT-WEEK GRANDMOTHER VISIT PRO-1.
+
+Input: "Why are you late?"
+Output: YOU LATE WHY?
+
+Input: "My name is John and I have three cats."
+Output: PRO-1 NAME J-O-H-N PRO-1 HAVE CAT THREE.
+
+Input: "I don't want that."
+Output: THAT PRO-1 WANT NOT.
+
+Input: "As for my car, it is old."
+Output: MY CAR, OLD.
 """),
             ("user", "Translate the following English text to ASL glosses: {text}")
         ])
@@ -36,7 +52,23 @@ Follow the standard ASL glossing conventions:
             ("system", """You are an expert translator from American Sign Language (ASL) glosses into natural spoken/written English.
 Your task is to take a sequence of ASL glosses (usually written in uppercase) and produce a natural-sounding, grammatically correct English translation.
 Infer the correct tense, person, and context from the given glosses.
-Provide ONLY the final English translation, without any additional explanations or text.
+Provide ONLY the final English translation, without any additional explanations, conversational filler, or text.
+
+Examples:
+Input: "NEXT-WEEK GRANDMOTHER VISIT PRO-1."
+Output: Next week I will visit my grandmother.
+
+Input: "YOU LATE WHY?"
+Output: Why are you late?
+
+Input: "PRO-1 NAME J-O-H-N PRO-1 HAVE CAT THREE."
+Output: My name is John and I have three cats.
+
+Input: "THAT PRO-1 WANT NOT."
+Output: I don't want that.
+
+Input: "MY CAR, OLD."
+Output: As for my car, it is old.
 """),
             ("user", "Translate the following ASL glosses to natural English text: {gloss}")
         ])
@@ -47,12 +79,18 @@ Provide ONLY the final English translation, without any additional explanations 
     def text_to_gloss(self, text: str) -> str:
         """Translates natural English text to ASL glosses."""
         response = self.text_to_gloss_chain.invoke({"text": text})
-        return response.content.strip()
+        content = response.content.strip()
+        if content.startswith("Output:"):
+            content = content[7:].strip()
+        return content
 
     def gloss_to_text(self, gloss: str) -> str:
         """Translates ASL glosses to natural English text."""
         response = self.gloss_to_text_chain.invoke({"gloss": gloss})
-        return response.content.strip()
+        content = response.content.strip()
+        if content.startswith("Output:"):
+            content = content[7:].strip()
+        return content
 
 if __name__ == "__main__":
     # A simple test block

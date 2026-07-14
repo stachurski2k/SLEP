@@ -19,13 +19,23 @@
     <div class="container glass-panel">
         <header>
             <h1>ASL Translator</h1>
-            <p>Translate between English text and ASL glosses powered by Gemini AI</p>
+            <p>Translate between English text and ASL glosses</p>
         </header>
 
         <main>
             <div class="tabs">
                 <button class="tab-btn active" data-mode="text2gloss">Text ➔ Glosses</button>
                 <button class="tab-btn" data-mode="gloss2text">Glosses ➔ Text</button>
+            </div>
+            
+            <div class="model-info" style="text-align: right; margin-bottom: 1rem; color: var(--text-color); font-size: 0.9rem; display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
+                <span id="model-indicator">Model: Loading...</span>
+                <button id="run-benchmark-btn" class="secondary-btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: white; cursor: pointer; transition: all 0.2s;">Run Benchmark</button>
+            </div>
+            
+            <div id="benchmark-results" class="hidden" style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;">
+                <h3 style="margin-top: 0; margin-bottom: 0.5rem;">Benchmark Results</h3>
+                <div id="benchmark-content">Running benchmark... Please wait.</div>
             </div>
 
             <div class="editor-area">

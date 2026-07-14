@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from translator import GlossTranslator
 import os
+from benchmark import run_benchmark
 
 app = FastAPI(title="ASL Translator API")
 
@@ -47,7 +48,25 @@ async def gloss_to_text(req: TranslationRequest):
         return TranslationResponse(result=result)
     except Exception as e:
         return TranslationResponse(result=f"API Error: {str(e)}")
+@app.get("/api/model_info")
+async def get_model_info():
+    if not translator:
+        return {"model": "None (Error)"}
+    if hasattr(translator.llm, "model"):
+        return {"model": getattr(translator.llm, "model")}
+    elif hasattr(translator.llm, "model_name"):
+        return {"model": getattr(translator.llm, "model_name")}
+    return {"model": "Unknown Model"}
 
+@app.get("/api/benchmark")
+async def api_benchmark():
+    if not translator:
+        return {"error": "Translator not initialized."}
+    try:
+        results = run_benchmark(translator)
+        return results
+    except Exception as e:
+        return {"error": f"Benchmark failed: {str(e)}"}
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
