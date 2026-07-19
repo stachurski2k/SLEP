@@ -31,12 +31,32 @@ class S3Service:
         )
         self.bucket = config.s3_bucket
 
+    def ensure_bucket_exists(self) -> None:
+        """Create the bucket lazily when the storage backend is still empty."""
+        try:
+            self.client.head_bucket(Bucket=self.bucket)
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "")
+            if error_code not in {"404", "NoSuchBucket", "NotFound"}:
+                logger.error(f"Failed to check bucket {self.bucket}: {e}")
+                raise
+
+            try:
+                self.client.create_bucket(Bucket=self.bucket)
+                logger.info(f"Created bucket s3://{self.bucket}")
+            except ClientError as create_error:
+                create_error_code = create_error.response.get("Error", {}).get("Code", "")
+                if create_error_code not in {"BucketAlreadyOwnedByYou", "BucketAlreadyExists"}:
+                    logger.error(f"Failed to create bucket {self.bucket}: {create_error}")
+                    raise
+
     def upload(self, file_path: str, s3_key: str, content_type: str = None) -> str:
         """
         Upload a local file to S3.
         Returns the S3 URL of the uploaded file.
         """
         try:
+            self.ensure_bucket_exists()
             extra_args = {}
             if content_type:
                 extra_args["ContentType"] = content_type
@@ -60,6 +80,7 @@ class S3Service:
         Returns the S3 URL of the uploaded file.
         """
         try:
+            self.ensure_bucket_exists()
             self.client.put_object(
                 Bucket=self.bucket,
                 Key=s3_key,
@@ -109,6 +130,7 @@ class S3Service:
         A random hex prefix is prepended to the filename to avoid collisions.
         Returns a dict with 'url', 'key' (the actual key with prefix), and 'expires_in'.
         """
+        self.ensure_bucket_exists()
         prefix = secrets.token_hex(8)
         directory = os.path.dirname(s3_key)
         filename = os.path.basename(s3_key)

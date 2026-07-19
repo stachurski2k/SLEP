@@ -66,6 +66,7 @@ class VideoCrud:
         query = select(Video)
         if dataset_id is not None:
             query = query.where(Video.dataset_id == dataset_id)
+        query = query.order_by(Video.id.asc())
         result = await self.db.execute(query.offset(page * limit).limit(limit))
         return [VideoSummarySchema.model_validate(row) for row in result.scalars().all()]
 

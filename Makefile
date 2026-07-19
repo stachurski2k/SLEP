@@ -8,8 +8,8 @@ build:
 	docker compose build
 
 run: 
-	docker compose up s3 data-collection-api data-collection-worker data-collection-flower postgres redis -d
+	docker compose up s3 data-collection-api data-collection-worker data-collection-flower postgres redis data-collection-frontend -d
 
 run-dev: 
-	docker compose up s3-dev data-collection-api data-collection-worker data-collection-flower postgres redis -d
+	docker compose up s3-dev data-collection-api data-collection-worker data-collection-flower postgres redis data-collection-frontend -d
 
