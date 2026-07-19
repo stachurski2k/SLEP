@@ -5,13 +5,14 @@ from app.api.v1.export_dataset_jobs.schemas import ExportDatasetJobCreateRequest
 from app.crud.export_dataset_job import ExportDatasetJobCrud
 from app.dependencies import get_db
 from app.schemas.export_dataset_job import ExportDatasetJobSchema
+from app.services.export_dataset import ExportDatasetService
 
 router = APIRouter(prefix="/export-dataset-jobs", tags=["export-dataset-jobs"])
 
 
 @router.post("/", response_model=ExportDatasetJobSchema)
 async def create_export_dataset_job(body: ExportDatasetJobCreateRequest, db: AsyncSession = Depends(get_db)):
-    return await ExportDatasetJobCrud(db).create(body.original_dataset_id)
+    return await ExportDatasetService(db).create_export_job(body.original_dataset_id)
 
 
 @router.get("/", response_model=list[ExportDatasetJobSchema])

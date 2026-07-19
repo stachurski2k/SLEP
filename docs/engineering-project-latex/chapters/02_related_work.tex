@@ -1,0 +1,179 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Chapter 2: Related Work
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Related Work}
+\label{chap:related-work}
+
+\subsection{Sign language recognition and translation (SLR/SLT)}
+\label{sec:slr-slt-background}
+
+Automatic sign language translation decomposes around the intermediate,
+gloss-level representation introduced in Chapter~\ref{chap:introduction}
+(Section~\ref{sec:motivation-context}). This decomposition yields four directed
+sub-tasks: \emph{video-to-gloss} and \emph{gloss-to-text} on the recognition
+side, and \emph{text-to-gloss} and avatar-based \emph{gloss-to-video} on the
+production side. The present project targets the video-to-gloss stage first
+(Chapter~\ref{chap:isolated-gloss-recognition}), then extends toward gloss-text
+translation (Chapter~\ref{chap:text-translation}) and their integration into a
+sentence-level pipeline (Chapter~\ref{chap:sentence-level-translation}).
+
+Even in its isolated form -- where each input video contains a single,
+pre-segmented sign -- video-to-gloss recognition is non-trivial. The same gloss
+is executed differently across signers, varying in hand shape, movement
+trajectory, signing pace, and body proportions, producing substantial
+intra-class variability. Conventional softmax classifiers, which partition the
+input space with fixed decision boundaries, are poorly suited to absorbing this
+variability, particularly under the limited-data conditions typical of sign
+language corpora. This observation motivates the retrieval-based, metric-learning
+formulation adopted for isolated gloss recognition in this work (see
+Chapter~\ref{chap:isolated-gloss-recognition}), in contrast to the prevailing
+classification-based approaches surveyed below.
+
+\subsection{Video-to-gloss methods}
+\label{sec:video-to-gloss-methods}
+
+This section surveys architectures proposed in the literature for isolated and
+continuous sign gesture recognition, spanning skeleton-based, appearance-based,
+and hybrid approaches.
+
+\emph{Sign Pose-Based Transformer for Word-Level Sign Language Recognition}
+\cite{bohacek2022spoter} introduces SPOTER, a system that discards raw RGB frames
+entirely and operates only on 2D skeletal keypoints extracted from a pose
+estimator (body and hand joints). Each frame is represented as a vector of joint
+coordinates; the sequence of these vectors across the video clip forms the input
+to a standard transformer encoder-decoder, where a single learnable class query
+token attends over the encoded frame sequence (similar to the DETR
+object-detection paradigm) to produce a final classification. Key contributions
+include a normalization step that rescales joint coordinates relative to a fixed
+body reference frame to remove subject- and camera-distance variance, and a
+skeleton-specific augmentation scheme (random joint rotation, scaling, and
+perspective-like distortion applied directly to keypoints rather than pixels).
+Reported results show 63.18\% top-1 accuracy on the larger, multi-signer WLASL
+dataset versus 100\% on the smaller, more controlled LSA64 dataset, indicating
+that the lightweight architecture trades some accuracy on diverse, large-vocabulary
+data for a substantial reduction in model size and inference cost.
+
+\emph{Power Data Classification: A Hybrid of a Novel Local Time Warping and LSTM}
+\cite{li2016ltwlstm} follows a standard LSTM formulation for sequence
+classification, with softmax over the summed hidden states, but its distinguishing
+contribution is Local Time Warping (LTW), a custom distance metric that replaces
+the dynamic-programming alignment of DTW with a non-commutative, fixed-window
+local comparison -- reducing complexity from $O(nm)$ to linear time while
+retaining comparable discriminative power. The final classifier fuses a
+1-nearest-neighbour classifier using LTW with the LSTM's softmax output at the
+probability level. Across five-fold cross-validation, the standalone LSTM reaches
+roughly 85--88\% accuracy, comparable to the LTW-based nearest-neighbour classifier
+alone, but fusing the two branches raises accuracy to 89--93\%, a result the
+authors attribute to the parametric and non-parametric branches making
+structurally different errors. This dual-branch fusion pattern is structurally
+analogous to combining a learned temporal encoder with FAISS-based retrieval, one
+of the extensions discussed in Section~\ref{sec:gloss-recognition-discussion}.
+
+\emph{A Comprehensive Study on Deep Learning-Based Methods for Sign Language
+Recognition} \cite{adaloglou2021comprehensive} re-implements and retrains several
+model families under identical experimental conditions (same datasets,
+preprocessing, and splits) to isolate architecture effects from confounding
+factors that typically vary across papers. The evaluated families include 2D-CNN
+frame classifiers, 3D-CNNs (e.g.\ I3D-style spatiotemporal convolutions),
+CNN+RNN hybrids, and graph-based models operating on pose keypoints, evaluated
+separately for isolated sign recognition and continuous sign language recognition
+(CSLR, typically trained with a CTC loss). The central finding is that no single
+architecture dominates across all datasets and tasks: pose-based and graph-based
+models tend to generalise better across signers, while appearance-based CNN/3D-CNN
+models tend to score higher on datasets with limited signer diversity --
+underscoring that reported accuracy figures are heavily dataset-dependent. This
+methodological point directly motivates the controlled, single-condition
+benchmark of five temporal encoders conducted in
+Chapter~\ref{chap:isolated-gloss-recognition}.
+
+A broader review of architectures across both recognition and translation
+\cite{review2024dlprocessing} covers 3D-CNN approaches that apply spatiotemporal
+convolution kernels directly over stacked video frames, and Transformer-based
+sign language translation systems (e.g.\ Camgoz et al.) that replace the CNN+RNN
+pipeline with self-attention over either video features or extracted gloss
+sequences, removing the sequential bottleneck of RNNs. It also surveys
+multimodal transfer-learning baselines that pretrain visual encoders on
+large-scale action-recognition corpora (e.g.\ Kinetics) before fine-tuning on
+smaller sign language datasets, consistently improving downstream recognition
+accuracy relative to training from scratch.
+
+Several further studies characterise the practical range of appearance- and
+hybrid-based approaches. A GoogLeNet-plus-BiLSTM pipeline trained on
+field-recorded (uncontrolled illumination and background) video
+\cite{agri2021bilstm} reaches 76.21\% average accuracy on a custom
+agricultural-domain dataset, notably lower than figures reported by comparable
+hybrid models trained on studio-recorded data -- attributed by the authors to the
+uncontrolled acquisition setting rather than to a weakness of the architecture. A
+comparative benchmark of CNN, MLP, RNN, SVM, and KNN classifiers on static
+hand-shape images \cite{ann2022recognition} reaches 99\% effectiveness on a
+50{,}000-image training set, though this reflects training-set fit rather than
+generalisation, and the underlying model does not handle continuous or dynamic
+signs. A modality-level review \cite{modalities2022review} separates
+vision-based (RGB/RGB-D feeding CNN or CNN-RNN pipelines), skeleton/pose-based
+(keypoint sequences feeding GCNs or transformers), and wearable-sensor-based
+(IMU/EMG feeding RNNs) systems, noting that multimodal benchmarks such as AUTSL
+generally report higher accuracy than single-modality RGB datasets due to the
+added discriminative information from depth and skeletal streams.
+
+Two further architectures combine convolutional and recurrent stages directly.
+A 3D-CNN front end stacked with LSTM layers \cite{cnn3dlstm2023realtime}
+convolves across height, width, and time simultaneously to extract motion-aware
+spatial features without a separate optical-flow stage, before passing the
+resulting per-clip feature sequence to LSTM layers for longer-range temporal
+modelling. \emph{Deepsign} \cite{deepsign2022} stacks a single LSTM layer
+followed by a GRU layer over frame-level features, and empirically finds that,
+of the four possible two-layer LSTM/GRU orderings, LSTM-then-GRU performs best,
+reaching approximately 97\% accuracy across eleven gesture classes on a custom
+dataset.
+
+Finally, \emph{Spatial-Temporal Graph Convolutional Networks for Sign Language
+Recognition} \cite{correia2019stgcn} represents each frame's skeletal pose as a
+graph, with joints as nodes and anatomical connections (e.g.\ wrist--elbow,
+elbow--shoulder) as edges. A spatial graph convolution aggregates information
+between connected joints within a frame, while a temporal convolution connects
+the same joint across consecutive frames, following the ST-GCN formulation
+originally developed for general skeleton-based action recognition. This
+explicitly encodes kinematic structure as an inductive bias, in contrast to
+approaches that receive only a flattened coordinate vector per frame -- a
+limitation of the model architecture adopted in
+Chapter~\ref{chap:isolated-gloss-recognition} and revisited in
+Section~\ref{sec:gloss-recognition-discussion} as a direction for future work.
+
+\subsection{NLP models for sign language}
+\label{sec:nlp-models-sign-language}
+
+Beyond visual recognition, gloss-to-text and text-to-gloss translation cast sign
+language processing as a sequence-to-sequence NLP problem, typically approached
+with Transformer-based encoder-decoder architectures operating on gloss token
+sequences rather than raw text alone (see the Transformer-based translation
+systems noted in Section~\ref{sec:video-to-gloss-methods}
+\cite{review2024dlprocessing}).
+
+\todo{PLACEHOLDER: Survey NLP models specifically applied to gloss2text /
+text2gloss translation -- e.g. sequence-to-sequence and Transformer-based sign
+language translation models (Camgoz et al., Sign Language Transformers),
+pretrained language model fine-tuning for gloss translation, back-translation
+and data augmentation strategies for low-resource gloss corpora. This section
+should ground the modelling choices made in Chapter~\ref{chap:text-translation}.}
+
+\subsection{Existing systems and benchmarks}
+\label{sec:existing-systems-benchmarks}
+
+The literature surveyed above relies on a range of datasets that also inform the
+benchmark design in this thesis. \textbf{WLASL} and \textbf{LSA64} are used in
+\cite{bohacek2022spoter} to contrast performance on a large, multi-signer
+vocabulary against a smaller, controlled one. \textbf{AUTSL} is a large-scale
+multimodal Turkish sign language dataset used to benchmark CNN-LSTM and 3D-CNN
+baselines \cite{modalities2022review}. \textbf{ASLLVD} underlies the
+skeleton-based dataset released alongside the ST-GCN model
+\cite{correia2019stgcn}. \textbf{IISL2020} is a custom eleven-class dataset used
+to benchmark the stacked LSTM-GRU architecture in \cite{deepsign2022}. The
+present work benchmarks isolated gloss recognition on a subset of the
+\textbf{ASL Citizen} dataset (Microsoft, 2023), detailed in
+Section~\ref{sec:gloss-recognition-dataset}.
+
+\todo{PLACEHOLDER: Describe existing end-to-end SLR/SLT systems and public
+benchmarks/leaderboards (e.g. How2Sign, RWTH-PHOENIX-Weather 2014T, existing
+production or research demo systems) beyond the datasets already covered above,
+and relate them to the scope of this thesis.}
