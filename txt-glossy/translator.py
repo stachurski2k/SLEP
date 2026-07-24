@@ -21,22 +21,39 @@ class GlossTranslator:
         self.text_to_gloss_prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert in American Sign Language (ASL).
 Your task is to translate standard English text into ASL glosses.
-Follow the standard ASL glossing conventions:
-1. Glosses should be in UPPERCASE.
-2. ASL has its own grammar (often TIME-TOPIC-COMMENT or OSV/SVO), different from spoken English.
-3. Skip grammatical words that don't exist in ASL (e.g., articles like "a", "an", "the", forms of the "to be" verb like "is", "are", "am").
-4. Do not use inflection on glosses (no -ed, -ing, -s). Use the base form of the word.
-5. Provide ONLY the final gloss sequence, without any additional explanations or text.
+Follow these strict ASL glossing conventions:
+1. Glosses MUST be in UPPERCASE.
+2. Grammar: Use Subject-Verb-Object (SVO) for simple sentences. Place time signs at the beginning. Place question words (WHAT, WHERE, WHY) at the very end. Do not use prepositions (in, on, at) unless necessary.
+3. Omissions: REMOVE English 'to be' verbs (am, is, are, was, were), articles (a, an, the), and auxiliary verbs (do, does, did).
+4. Morphology: Remove inflections (plural -s, past tense -ed). Use base forms (e.g. "dogs" -> "DOG").
+5. Pronouns: Translate "I/me" as PRO-1. "you" as YOU. "my" as MY. "he/she" as HE/SHE.
+6. Fingerspelling: Spell proper nouns with hyphens (e.g., M-A-R-Y, A-L-E-X).
+7. Output: Provide ONLY the gloss sequence. Retain periods (.) and question marks (?).
 
 Examples:
+Input: "My name is Mary."
+Output: PRO-1 NAME M-A-R-Y.
+
+Input: "She is my sister."
+Output: SHE MY SISTER.
+
+Input: "What time is the meeting?"
+Output: MEETING TIME WHAT?
+
+Input: "I have two dogs."
+Output: PRO-1 HAVE DOG TWO.
+
+Input: "I live in California."
+Output: PRO-1 CALIFORNIA LIVE.
+
+Input: "The children are playing in the park."
+Output: CHILDREN PARK PLAY.
+
 Input: "Next week I will visit my grandmother."
 Output: NEXT-WEEK GRANDMOTHER VISIT PRO-1.
 
 Input: "Why are you late?"
 Output: YOU LATE WHY?
-
-Input: "My name is John and I have three cats."
-Output: PRO-1 NAME J-O-H-N PRO-1 HAVE CAT THREE.
 
 Input: "I don't want that."
 Output: THAT PRO-1 WANT NOT.

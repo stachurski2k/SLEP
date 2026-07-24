@@ -5,7 +5,7 @@ from rouge_score import rouge_scorer
 from translator import GlossTranslator
 
 def run_benchmark(translator: GlossTranslator):
-    data_path = os.path.join(os.path.dirname(__file__), "benchmark_data.json")
+    data_path = os.path.join(os.path.dirname(__file__), "benchmark_data_full.json")
     if not os.path.exists(data_path):
         return {"error": "Benchmark data not found."}
         

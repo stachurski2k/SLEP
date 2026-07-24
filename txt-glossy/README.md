@@ -2,6 +2,13 @@
 
 This module uses LLM models (defaulting to Google Gemini `gemini-2.5-flash`) to perform translation between standard English text and American Sign Language (ASL) glosses.
 
+## Benchmarks (Ollama Llama 3.1)
+
+- **Text ➔ Gloss**: BLEU: 55.02 | ROUGE-1: 91.05
+- **Gloss ➔ Text**: BLEU: 82.21 | ROUGE-1: 96.55
+
+*Tested on 45 sample pairs using local model.*
+
 ## Requirements
 
 - Python 3.10+

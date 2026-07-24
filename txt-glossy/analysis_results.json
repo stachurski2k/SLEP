@@ -1,0 +1,272 @@
+[
+  {
+    "text": "My name is Mary.",
+    "expected": "PRO-1 NAME M-A-R-Y.",
+    "predicted": "MARY NAME IS MARY.",
+    "rouge1": 0.182
+  },
+  {
+    "text": "She is my sister.",
+    "expected": "SHE MY SISTER.",
+    "predicted": "SISTER PRO-1",
+    "rouge1": 0.333
+  },
+  {
+    "text": "What time is the meeting?",
+    "expected": "MEETING TIME WHAT?",
+    "predicted": "MEETING WHEN?",
+    "rouge1": 0.4
+  },
+  {
+    "text": "I like coffee, but I don't like tea.",
+    "expected": "COFFEE PRO-1 LIKE, TEA PRO-1 NOT-LIKE.",
+    "predicted": "I LIKE COFFEE, BUT I DON'T LIKE TEA.",
+    "rouge1": 0.444
+  },
+  {
+    "text": "Don't touch that.",
+    "expected": "THAT TOUCH DON'T.",
+    "predicted": "THAT PRO-1 TOUCH NOT.",
+    "rouge1": 0.444
+  },
+  {
+    "text": "I need to practice ASL every day.",
+    "expected": "PRO-1 NEED PRACTICE ASL EVERYDAY.",
+    "predicted": "NEED PRACTICE ASL EVERY DAY.",
+    "rouge1": 0.545
+  },
+  {
+    "text": "I am learning ASL because I want to communicate with Deaf people.",
+    "expected": "PRO-1 LEARN ASL BECAUSE DEAF PEOPLE COMMUNICATE-WITH PRO-1 WANT.",
+    "predicted": "LEARN ASL WHY WANT COMMUNICATE DEAF PEOPLE.",
+    "rouge1": 0.632
+  },
+  {
+    "text": "What is your name?",
+    "expected": "YOUR NAME WHAT?",
+    "predicted": "YOU NAME WHAT?",
+    "rouge1": 0.667
+  },
+  {
+    "text": "I finished my homework.",
+    "expected": "HOMEWORK FINISH PRO-1.",
+    "predicted": "FINISH HOMEWORK",
+    "rouge1": 0.667
+  },
+  {
+    "text": "I don't know.",
+    "expected": "PRO-1 NOT-KNOW.",
+    "predicted": "KNOW NOT.",
+    "rouge1": 0.667
+  },
+  {
+    "text": "The children are playing in the park.",
+    "expected": "CHILDREN PARK PLAY.",
+    "predicted": "CHILD PLAY PARK.",
+    "rouge1": 0.667
+  },
+  {
+    "text": "I finished work.",
+    "expected": "PRO-1 FINISH WORK.",
+    "predicted": "WORK FINISH.",
+    "rouge1": 0.667
+  },
+  {
+    "text": "The class starts at ten o'clock.",
+    "expected": "CLASS START TIME TEN.",
+    "predicted": "CLASS START TEN-O'CLOCK.",
+    "rouge1": 0.667
+  },
+  {
+    "text": "I am happy to meet you.",
+    "expected": "PRO-1 HAPPY MEET YOU.",
+    "predicted": "ME HAPPY MEET YOU.",
+    "rouge1": 0.667
+  },
+  {
+    "text": "I want to learn ASL.",
+    "expected": "PRO-1 WANT LEARN ASL.",
+    "predicted": "WANT LEARN ASL.",
+    "rouge1": 0.75
+  },
+  {
+    "text": "I watched a movie yesterday.",
+    "expected": "YESTERDAY MOVIE WATCH PRO-1.",
+    "predicted": "YESTERDAY WATCH MOVIE.",
+    "rouge1": 0.75
+  },
+  {
+    "text": "Can you help me?",
+    "expected": "YOU HELP ME CAN?",
+    "predicted": "YOU HELP ME?",
+    "rouge1": 0.857
+  },
+  {
+    "text": "My mother cooks dinner.",
+    "expected": "MY MOTHER COOK DINNER.",
+    "predicted": "MOTHER COOK DINNER.",
+    "rouge1": 0.857
+  },
+  {
+    "text": "I live in California.",
+    "expected": "PRO-1 CALIFORNIA LIVE.",
+    "predicted": "CALIFORNIA IN LIVE PRO-1.",
+    "rouge1": 0.889
+  },
+  {
+    "text": "My friend gave me a gift.",
+    "expected": "MY FRIEND GIFT GIVE-ME.",
+    "predicted": "FRIEND GIVE ME GIFT.",
+    "rouge1": 0.889
+  },
+  {
+    "text": "My teacher's name is John.",
+    "expected": "MY TEACHER NAME J-O-H-N.",
+    "predicted": "TEACHER NAME J-O-H-N.",
+    "rouge1": 0.923
+  },
+  {
+    "text": "My name is Alex.",
+    "expected": "MY NAME A-L-E-X.",
+    "predicted": "MY NAME A-L-E-X.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "I don't understand.",
+    "expected": "PRO-1 NOT-UNDERSTAND.",
+    "predicted": "PRO-1 UNDERSTAND NOT.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Do you like coffee?",
+    "expected": "COFFEE YOU LIKE?",
+    "predicted": "YOU LIKE COFFEE?",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Where do you live?",
+    "expected": "YOU LIVE WHERE?",
+    "predicted": "YOU LIVE WHERE?",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Yesterday I went to the store.",
+    "expected": "YESTERDAY STORE PRO-1 GO.",
+    "predicted": "YESTERDAY PRO-1 GO STORE.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "I will go tomorrow.",
+    "expected": "TOMORROW PRO-1 GO.",
+    "predicted": "TOMORROW PRO-1 GO.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "The book is on the table.",
+    "expected": "BOOK TABLE ON.",
+    "predicted": "BOOK ON TABLE.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Please help me.",
+    "expected": "PLEASE HELP ME.",
+    "predicted": "PLEASE HELP ME.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "I have two dogs.",
+    "expected": "PRO-1 HAVE DOG TWO.",
+    "predicted": "TWO DOG PRO-1 HAVE.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "The movie was very interesting.",
+    "expected": "MOVIE VERY INTERESTING.",
+    "predicted": "MOVIE VERY INTERESTING.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Do you like pizza?",
+    "expected": "YOU LIKE PIZZA?",
+    "predicted": "YOU LIKE PIZZA?",
+    "rouge1": 1.0
+  },
+  {
+    "text": "The weather is nice today.",
+    "expected": "TODAY WEATHER NICE.",
+    "predicted": "WEATHER NICE TODAY.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "I will go to school tomorrow.",
+    "expected": "TOMORROW SCHOOL GO PRO-1.",
+    "predicted": "TOMORROW PRO-1 GO SCHOOL.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "The dog chased the cat.",
+    "expected": "DOG CAT CHASE.",
+    "predicted": "DOG CHASE CAT.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "I want to buy a new phone.",
+    "expected": "PRO-1 WANT BUY NEW PHONE.",
+    "predicted": "NEW PHONE PRO-1 WANT BUY.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "The Deaf community is important.",
+    "expected": "DEAF COMMUNITY IMPORTANT.",
+    "predicted": "DEAF-COMMUNITY IMPORTANT.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Learning sign language is hard but fun.",
+    "expected": "SIGN LANGUAGE LEARN HARD BUT FUN.",
+    "predicted": "LEARN SIGN LANGUAGE HARD BUT FUN.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Where is the book?",
+    "expected": "BOOK WHERE?",
+    "predicted": "BOOK WHERE?",
+    "rouge1": 1.0
+  },
+  {
+    "text": "He/she drives a car fast.",
+    "expected": "HE/SHE DRIVE CAR FAST.",
+    "predicted": "HE/SHE DRIVE CAR FAST.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "I have three cats.",
+    "expected": "PRO-1 HAVE CAT THREE.",
+    "predicted": "PRO-1 HAVE CAT THREE.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Why are you late?",
+    "expected": "YOU LATE WHY?",
+    "predicted": "YOU LATE WHY?",
+    "rouge1": 1.0
+  },
+  {
+    "text": "I don't want that.",
+    "expected": "THAT PRO-1 WANT NOT.",
+    "predicted": "THAT PRO-1 WANT NOT.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "As for my car, it is old.",
+    "expected": "MY CAR, OLD.",
+    "predicted": "MY CAR, OLD.",
+    "rouge1": 1.0
+  },
+  {
+    "text": "Next week I will visit my grandmother.",
+    "expected": "NEXT-WEEK GRANDMOTHER VISIT PRO-1.",
+    "predicted": "NEXT-WEEK PRO-1 VISIT GRANDMOTHER.",
+    "rouge1": 1.0
+  }
+]

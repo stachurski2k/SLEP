@@ -124,6 +124,13 @@ services:
       - ollama-data:/root/.ollama
     networks:
       - slep-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   txt-glossy:
     build:
