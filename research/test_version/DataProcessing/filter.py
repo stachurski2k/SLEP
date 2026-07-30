@@ -16,7 +16,8 @@ def trim_frames(sequence: np.ndarray, path):
     has_hand = ~both_nan 
 
     if not np.any(has_hand):
-        seq_filtered = seq[0:0] 
+        print(f"NO HAND DETECTED IN FILE {path}")
+        return
     else:
         valid_indices = np.where(has_hand)[0]
 

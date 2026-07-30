@@ -1,30 +1,36 @@
-import os
+from pathlib import Path
 import faiss
 import numpy as np
 from dtaidistance import dtw_ndim
 
+DEFAULT_FAISS_INDEX_PATH = Path("Recognition/faiss_index.faiss")
 
-def build_faiss_index(train_embeddings, save_path="Recognition/index.faiss"):
-    emb = np.ascontiguousarray(train_embeddings, dtype=np.float32)
+
+def build_faiss_index(embeddings, index_path=DEFAULT_FAISS_INDEX_PATH):
+    index_path = Path(index_path)
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+
+    emb = np.ascontiguousarray(embeddings, dtype=np.float32)
+    if emb.ndim != 2:
+        raise ValueError(f"Expected embeddings with shape [n_samples, dim], got {emb.shape}")
+
     faiss.normalize_L2(emb)
-
     index = faiss.IndexFlatIP(emb.shape[1])
     index.add(emb)
+    faiss.write_index(index, str(index_path))
+    return index
 
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    faiss.write_index(index, save_path)
 
-
-def load_faiss_index(path = "Recognition/index.faiss"):
-    return faiss.read_index(path)
+def load_faiss_index(index_path=DEFAULT_FAISS_INDEX_PATH):
+    return faiss.read_index(str(index_path))
 
 
 def faiss_search(index, query_embedding, k=10):
     query = np.ascontiguousarray(query_embedding.reshape(1, -1), dtype=np.float32)
     faiss.normalize_L2(query)
-
+ 
     distances, indices = index.search(query, k)
-
+ 
     return indices[0]
 
 

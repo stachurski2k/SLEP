@@ -23,8 +23,10 @@ def distance_stats(distances: torch.Tensor, labels: torch.Tensor):
 
 
 def embedding_distances(model, loader, device):
-
-    totals = {"pos": 0.0, "neg": 0.0, "n": 0}
+    total_pos = 0.0
+    total_neg = 0.0
+    count_pos = 0
+    count_neg = 0
 
     with torch.no_grad():
         for sequences, labels in loader:
@@ -33,9 +35,14 @@ def embedding_distances(model, loader, device):
 
             d_pos, d_neg = distance_stats(pairwise_distances(embeddings), labels.to(device))
 
-            totals["pos"] += d_pos
-            totals["neg"] += d_neg
-            totals["n"]   += 1
+            if d_pos == d_pos:
+                total_pos += d_pos
+                count_pos += 1
+            if d_neg == d_neg:
+                total_neg += d_neg
+                count_neg += 1
 
-    n = totals["n"]
-    return {"d_pos": totals["pos"] / n, "d_neg": totals["neg"] / n, "diff": (totals["neg"] - totals["pos"]) / n}
+    d_pos_avg = total_pos / count_pos if count_pos > 0 else float("nan")
+    d_neg_avg = total_neg / count_neg if count_neg > 0 else float("nan")
+    
+    return {"d_pos": d_pos_avg, "d_neg": d_neg_avg, "diff": d_neg_avg - d_pos_avg}

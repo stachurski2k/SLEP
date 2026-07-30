@@ -41,6 +41,7 @@ class TransformerEncoder(nn.Module):
         self.transformer = nn.TransformerEncoder(
             encoder_layer,
             num_layers=num_layers,
+            enable_nested_tensor=False,
         )
         embedding_dim=64
 

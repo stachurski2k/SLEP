@@ -14,6 +14,9 @@ class GestureDataset(Dataset):
         self.data = []        
         for path, label_str in paths:
             seq = np.load(path)
+            if seq.shape[0] == 0:
+                print(f"EMPTY FILE: {path}")
+                continue
             seq = preprocess(seq, target_len=60)
             self.data.append(seq.astype(np.float32)) 
             self.labels.append(label_map[label_str])

@@ -7,7 +7,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["GLOG_minloglevel"] = "2"
 os.environ["ABSL_LOGGING_MIN_LEVEL"] = "2"
 
-
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -32,8 +31,6 @@ POSE_KEY_POINTS = [11, 12, 13, 14, 15, 16]
 LEFT_WRIST_POSE_INDEX = 15
 RIGHT_WRIST_POSE_INDEX = 16
 FEATURE_SIZE = 144
-
-FRAME_SCALE = 1.5
 
 
 BaseOptions = mp.tasks.BaseOptions
@@ -70,26 +67,6 @@ def create_landmarkers():
         HandLandmarker.create_from_options(hands_options),
         PoseLandmarker.create_from_options(pose_options),
     )
-
-
-def enhance_frame(frame: np.ndarray) -> np.ndarray:
-    if FRAME_SCALE != 1.0:
-        frame = cv2.resize(
-            frame,
-            None,
-            fx=FRAME_SCALE,
-            fy=FRAME_SCALE,
-            interpolation=cv2.INTER_CUBIC,
-        )
-
-    lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
-    lightness, color_a, color_b = cv2.split(lab)
-    lightness = cv2.createCLAHE(
-        clipLimit=2.0,
-        tileGridSize=(8, 8),
-    ).apply(lightness)
-
-    return cv2.cvtColor(cv2.merge((lightness, color_a, color_b)), cv2.COLOR_LAB2BGR)
 
 
 def landmark_xy_distance(hand_landmarks, pose_landmark) -> float:
@@ -162,7 +139,6 @@ def extract_landmarks(hands_result, pose_result) -> np.ndarray:
 
     else:
         for _, label, coords in detected_hands:
-            # MediaPipe opisuje rece z perspektywy kamery, wiec odwracamy etykiety.
             if label == "Right":
                 left_hand = coords
             else:
@@ -172,7 +148,7 @@ def extract_landmarks(hands_result, pose_result) -> np.ndarray:
     features.extend(right_hand if right_hand is not None else [np.nan] * 63)
 
     if len(features) != FEATURE_SIZE:
-        raise ValueError(f"Nieprawidlowy rozmiar wektora landmarkow: {len(features)}")
+        raise ValueError(f"Invalid feature vector size: {len(features)}")
 
     return np.array(features, dtype=np.float32)
 
@@ -180,7 +156,7 @@ def extract_landmarks(hands_result, pose_result) -> np.ndarray:
 def process_video(video_path: Path, hands, pose, timestamp_offset_ms: int):
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
-        print(f"  Nie mozna otworzyc wideo: {video_path}")
+        print(f"  Cannot open video: {video_path}")
         return None, timestamp_offset_ms
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
@@ -193,7 +169,6 @@ def process_video(video_path: Path, hands, pose, timestamp_offset_ms: int):
             if not ret:
                 break
 
-            frame = enhance_frame(frame)
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
             timestamp_ms = timestamp_offset_ms + int(frame_index * 1000 / fps)
@@ -238,7 +213,7 @@ def collect_landmarks(dataset_dir: Path = DATASET_DIR, output_dir: Path = OUTPUT
                     timestamp_offset_ms,
                 )
                 if sequence is None:
-                    print(f"  Puste wideo: {video_path.name}")
+                    print(f"  Empty video: {video_path.name}")
                     continue
 
                 output_path = output_gesture_dir / f"{video_path.stem}.npy"

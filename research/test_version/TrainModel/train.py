@@ -8,7 +8,6 @@ import torch.nn.functional as F
 from pytorch_metric_learning import losses
 from torch.utils.data import DataLoader
 from torch.optim.swa_utils import AveragedModel
-from Recognition.faiss_dtw import build_faiss_index
 from DataProcessing.data_split import GestureDataset, build_splits
 from DataProcessing.augmentation import SequenceAugmentor
 from TrainModel.balanced_sampler import BalancedBatchSampler
@@ -18,7 +17,10 @@ from TrainModel.train_utils import (
     atomic_np_savez,
     atomic_torch_save,
     evaluate_knn,
-    save_embeddings,
+    build_best_artifacts,
+    export_model_state,
+    format_dists,
+
 )
 
 # ── PATHS ────────────────────────────────────────────────────────────────
@@ -71,18 +73,6 @@ AUG_MIRROR_PROB         = 0.5
 AUG_DROPOUT_PROB        = 0.05
 
 
-def export_model_state(eval_model):
-    if isinstance(eval_model, AveragedModel):
-        return eval_model.module.state_dict(), "ema"
-    return eval_model.state_dict(), "raw"
-
-
-def format_dists(dists):
-    return (
-        f"d_pos={dists['d_pos']:.4f} | "
-        f"d_neg={dists['d_neg']:.4f} | "
-        f"diff={dists['diff']:.4f}"
-    )
 def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
@@ -136,16 +126,16 @@ def training(model_encoder):
     g.manual_seed(SEED)
     
     train_loader = DataLoader(
-        train_ds, batch_sampler=train_sampler, num_workers=0, pin_memory=True, worker_init_fn=seed_worker, generator=g
+        train_ds, batch_sampler=train_sampler, num_workers=0, pin_memory=DEVICE.type=="cuda", worker_init_fn=seed_worker, generator=g
     )
     val_loader = DataLoader(
-        val_ds, batch_sampler=val_sampler, num_workers=0, pin_memory=True, worker_init_fn=seed_worker, generator=g
+        val_ds, batch_sampler=val_sampler, num_workers=0, pin_memory=DEVICE.type=="cuda", worker_init_fn=seed_worker, generator=g
     )
     train_eval_loader = DataLoader(
-        train_eval_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=True, worker_init_fn=seed_worker, generator=g
+        train_eval_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=DEVICE.type=="cuda", worker_init_fn=seed_worker, generator=g
     )
     val_eval_loader = DataLoader(
-        val_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=True, worker_init_fn=seed_worker, generator=g
+        val_ds, batch_size=64, shuffle=False, num_workers=0, pin_memory=DEVICE.type=="cuda", worker_init_fn=seed_worker, generator=g
     )
 
     # ── MODEL ─────────────────────────────────────────────────────────────
@@ -281,6 +271,7 @@ def training(model_encoder):
                 "label_map": label_map,
                 "train_embeddings": train_embeddings_file,
                 "val_embeddings": val_embeddings_file,
+                "model_state_source": model_state_source,
                 "config": {
                     "input_dim": INPUT_DIM,
                     "hidden_dim": HIDDEN_DIM,
@@ -313,30 +304,6 @@ def training(model_encoder):
             }
 
             atomic_torch_save(checkpoint, best_encoder_file)
-            save_embeddings(
-                current_eval_model, train_eval_ds, train_paths,
-                label_map, DEVICE, train_embeddings_file, normalize=NORMALIZE_EMBEDDINGS
-            )
-            save_embeddings(
-                current_eval_model, val_ds, val_paths,
-                label_map, DEVICE, val_embeddings_file, normalize=NORMALIZE_EMBEDDINGS
-            )
-
-            # ── BUILD FAISS INDEX ─────────────────────────────────────────────
-            faiss_db_dir = os.path.join("Recognition", f"{model_name}_db")
-            os.makedirs(faiss_db_dir, exist_ok=True)
-            faiss_index_path  = os.path.join(faiss_db_dir, "index.faiss")
-            faiss_labels_path = os.path.join(faiss_db_dir, "index_labels.npz")
-            train_data = np.load(train_embeddings_file)
-            build_faiss_index(train_data["embeddings"], save_path=faiss_index_path)
-            id_to_label = np.array(
-                [lbl for lbl, _ in sorted(label_map.items(), key=lambda item: item[1])]
-            )
-            np.savez(
-                faiss_labels_path,
-                labels=train_data["labels"],
-                id_to_label=id_to_label,
-            )
             saved = "  <- best"
 
         # ── EMBEDDING DISTANCES  ─────────────────────────────────────────────
@@ -402,7 +369,23 @@ def training(model_encoder):
     print(f"Best val accuracy:  {best_val_accuracy:.2%}")
     print(f"\nBest train distances: {format_dists(best_train_dists)}")
     print(f"Best val distances:   {format_dists(best_val_dists)}")
-    print(f"\nData saved in directory: {artifact_dir}")
+
+    print("\n" + "-" * 90)
+    build_best_artifacts(
+        model_encoder=model_encoder,
+        checkpoint_path=best_encoder_file,
+        train_dataset=train_eval_ds,
+        val_dataset=val_ds,
+        train_paths=train_paths,
+        val_paths=val_paths,
+        label_map=label_map,
+        device=DEVICE,
+        train_embeddings_file=train_embeddings_file,
+        val_embeddings_file=val_embeddings_file,
+        model_name=model_name,
+        normalize_embeddings=NORMALIZE_EMBEDDINGS,
+    )
+    print("\n" + "-" * 90)
 
 
 

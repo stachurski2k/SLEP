@@ -7,7 +7,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
-
+from torch.optim.swa_utils import AveragedModel
+from Recognition.build_faiss_db import build_index_from_npz
 
 class EarlyStopping:
     def __init__(self, patience=15, min_delta=0.001):
@@ -69,6 +70,25 @@ def atomic_np_savez(path, **arrays):
     try:
         with open(tmp_path, "wb") as file:
             np.savez(file, **arrays)
+        _robust_replace(tmp_path, path)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
+
+def atomic_faiss_save(embeddings, path):
+    import faiss
+
+    tmp_path = _atomic_write_path(path)
+    try:
+        emb = np.ascontiguousarray(embeddings, dtype=np.float32)
+        faiss.normalize_L2(emb)
+
+        index = faiss.IndexFlatIP(emb.shape[1])
+        index.add(emb)
+        faiss.write_index(index, tmp_path)
+
         _robust_replace(tmp_path, path)
     except Exception:
         if os.path.exists(tmp_path):
@@ -152,3 +172,60 @@ def evaluate_knn(model, train_eval_loader, val_eval_loader, device, normalize=Tr
 
     return accuracy, val_labels, predictions
 
+def build_best_artifacts(
+    model_encoder,
+    checkpoint_path,
+    train_dataset,
+    val_dataset,
+    train_paths,
+    val_paths,
+    label_map,
+    device,
+    train_embeddings_file,
+    val_embeddings_file,
+    model_name,
+    normalize_embeddings,
+):
+    if not os.path.exists(checkpoint_path):
+        print(f"Best checkpoint not found, skipping derived artifacts: {checkpoint_path}")
+        return
+
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
+    config = checkpoint["config"]
+
+    best_model = model_encoder(
+        config["input_dim"],
+        config["hidden_dim"],
+        config["num_layers"],
+        config["dropout"],
+    ).to(device)
+    best_model.load_state_dict(checkpoint["model_state"])
+    best_model.eval()
+
+    normalize = config.get("normalize_embeddings", normalize_embeddings)
+
+    save_embeddings(
+        best_model, train_dataset, train_paths,
+        label_map, device, train_embeddings_file, normalize=normalize
+    )
+    save_embeddings(
+        best_model, val_dataset, val_paths,
+        label_map, device, val_embeddings_file, normalize=normalize
+    )
+
+    print(f"Train embeddings saved: {train_embeddings_file}")
+    print(f"Val embeddings saved: {val_embeddings_file}")
+
+
+def export_model_state(eval_model):
+    if isinstance(eval_model, AveragedModel):
+        return eval_model.module.state_dict(), "ema"
+    return eval_model.state_dict(), "raw"
+
+
+def format_dists(dists):
+    return (
+        f"d_pos={dists['d_pos']:.4f} | "
+        f"d_neg={dists['d_neg']:.4f} | "
+        f"diff={dists['diff']:.4f}"
+    )

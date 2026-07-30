@@ -222,9 +222,8 @@ settings.json/
 .vscode
 
 Dataset/
-Dataset_test/
+Dataset_custom/
 Features/
-Features_test/
 
 Models/LSTMEncoder_Checkpoints/
 Models/BiLSTMEncoder_Checkpoints/
@@ -232,12 +231,20 @@ Models/GRUEncoder_Checkpoints/
 Models/BiGRUEncoder_Checkpoints/
 Models/TransformerEncoder_Checkpoints/
 
-Recognition/BiLSTMEncoder_db/
-Recognition/LSTMEncoder_db/
-Recognition/BiGRUEncoder_db/
-Recognition/GRUEncoder_db/
-Recognition/TransformerEncoder_db/
+Recognition/BiLSTMEncoder_db_base/
+Recognition/LSTMEncoder_db_base/
+Recognition/BiGRUEncoder_db_base/
+Recognition/GRUEncoder_db_base/
+Recognition/TransformerEncoder_db_base/
+
+Recognition/BiLSTMEncoder_db_custom/
+Recognition/LSTMEncoder_db_custom/
+Recognition/BiGRUEncoder_db_custom/
+Recognition/GRUEncoder_db_custom/
+Recognition/TransformerEncoder_db_custom/
 
 MediapipeModels/
 
 diagnose_video_result.txt
+live_diagnostic_results.csv
+
