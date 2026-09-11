@@ -27,14 +27,11 @@ def embedding_distances(model, loader, device):
     total_neg = 0.0
     count_pos = 0
     count_neg = 0
-
     with torch.no_grad():
         for sequences, labels in loader:
             embeddings = model(sequences.to(device))[0]
             embeddings = F.normalize(embeddings, p=2, dim=1)
-
             d_pos, d_neg = distance_stats(pairwise_distances(embeddings), labels.to(device))
-
             if d_pos == d_pos:
                 total_pos += d_pos
                 count_pos += 1

@@ -26,51 +26,53 @@ from TrainModel.train_utils import (
 # ── PATHS ────────────────────────────────────────────────────────────────
 LANDMARKS_DIR           = "Features"
 
-# ── MODEL ────────────────────────────────────────────────────────────────
-INPUT_DIM               = 144
-HIDDEN_DIM              = 256
-NUM_LAYERS              = 2
-DROPOUT                 = 0.4
+# ── MODEL ───────────────────────────────────────────────
+INPUT_DIM            = 144
+HIDDEN_DIM           = 256
+NUM_LAYERS           = 2
+DROPOUT              = 0.3
 
-# ── TRAINING ─────────────────────────────────────────────────────────────
-EPOCHS                  = 500
-VAL_RATIO               = 0.3
-SEED                    = 42
-NORMALIZE_EMBEDDINGS    = True
+# ── TRAINING ────────────────────────────────────────────
+EPOCHS               = 250
+VAL_RATIO            = 0.2
+SEED                 = 42
+NORMALIZE_EMBEDDINGS = True
 
-# ── LOSS ───────────────────────────────────────────────────────────────── 
-MS_ALPHA                = 2.0
-MS_BETA                 = 40.0
-MS_BASE                 = 0.5
+# ── LOSS ────────────────────────────────────────────────
+MS_ALPHA             = 2.0
+MS_BETA              = 50.0
+MS_BASE              = 0.5
 
-# ── SAMPLER ──────────────────────────────────────────────────────────────
-P_TRAIN                 = 16
-K_TRAIN                 = 4
-P_VAL                   = 16
-K_VAL                   = 4
+# ── SAMPLER ─────────────────────────────────────────────
+P_TRAIN              = 20
+K_TRAIN              = 4
+P_VAL                = 20
+K_VAL                = 4
 
-# ── SCHEDULER ────────────────────────────────────────────────────────────
-LEARNING_RATE           = 5e-4
-MIN_LR                  = 1e-5
-PATIENCE                = 20
-FACTOR                  = 0.7
+# batch = P*K = 80
 
-# ── EMA ──────────────────────────────────────────────────────────────────
-EMA_DECAY               = 0.99
-EMA_START_EPOCH         = 30
+# ── OPTIMIZER / SCHEDULER ───────────────────────────────
+LEARNING_RATE        = 3e-4
+MIN_LR               = 1e-6
+PATIENCE             = 10
+FACTOR               = 0.5
 
-# ── EARLY STOPPING ───────────────────────────────────────────────────────
-EARLY_STOP_PATIENCE     = 50
-EARLY_STOP_DELTA        = 0.005
+# ── EMA ─────────────────────────────────────────────────
+EMA_DECAY            = 0.995
+EMA_START_EPOCH      = 10
 
-# ── AUGMENTATION ─────────────────────────────────────────────────────────
-AUG_NOISE_STD           = 0.02
-AUG_STRETCH_RANGE       = (0.85, 1.15)
-AUG_WARP_PROB           = 0.5
-AUG_WARP_STD            = 0.08
-AUG_SCALE_RANGE         = (0.90, 1.10)
-AUG_MIRROR_PROB         = 0.5
-AUG_DROPOUT_PROB        = 0.05
+# ── EARLY STOPPING ──────────────────────────────────────
+EARLY_STOP_PATIENCE  = 50
+EARLY_STOP_DELTA     = 0.002
+
+# ── AUGMENTATION ────────────────────────────────────────
+AUG_NOISE_STD        = 0.01
+AUG_STRETCH_RANGE    = (0.9, 1.1)
+AUG_WARP_PROB        = 0.4
+AUG_WARP_STD         = 0.05
+AUG_SCALE_RANGE      = (0.95, 1.05)
+AUG_MIRROR_PROB      = 0.5
+AUG_DROPOUT_PROB     = 0.03
 
 
 def seed_worker(worker_id):

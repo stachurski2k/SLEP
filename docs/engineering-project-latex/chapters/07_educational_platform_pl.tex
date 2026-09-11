@@ -1,0 +1,49 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Rozdział 7: Platforma edukacyjna
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Platforma edukacyjna}
+\label{chap:educational-platform}
+
+Oprócz platformy do anotacji opisanej
+w rozdziale~\ref{chap:annotation-platform}, która wspiera gromadzenie danych
+ do trenowania modeli, projekt dostarcza platformę edukacyjną udostępniającą
+wytrenowane modele rozpoznawania i tłumaczenia
+(rozdziały~\ref{chap:isolated-gloss-recognition}
+ i~\ref{chap:sentence-level-translation}) użytkownikom końcowym za pośrednictwem
+przystępnego interfejsu.
+
+\todo{DO UZUPEŁNIENIA: Tematyka tego rozdziału nie została jeszcze uwzględniona
+w dotychczasowych raportach z prac badawczych i programistycznych projektu.
+Rozdział należy opracować po zaimplementowaniu platformy edukacyjnej. Poniższe
+podrozdziały przedstawiają jego planowaną strukturę.}
+
+\subsection{Architektura i stos technologiczny}
+\label{sec:edu-platform-architecture}
+
+\todo{DO UZUPEŁNIENIA: Należy opisać architekturę systemu i stos technologiczny
+platformy edukacyjnej, zachowując taki sam poziom szczegółowości jak
+w podrozdziale~\ref{sec:annotation-system-architecture} dotyczącym platformy
+ do anotacji (frameworki frontendu i backendu, przechowywanie danych,
+infrastruktura wdrożeniowa).}
+
+\subsection{Integracja modeli}
+\label{sec:edu-platform-model-integration}
+
+\todo{DO UZUPEŁNIENIA: Należy opisać sposób udostępniania platformie
+wytrenowanego modelu rozpoznawania izolowanych glos
+(rozdział~\ref{chap:isolated-gloss-recognition}) lub całościowego potoku
+przetwarzania (rozdział~\ref{chap:sentence-level-translation}), bądź obu tych
+rozwiązań -- infrastrukturę udostępniania modeli i wykonywania wnioskowania,
+kwestie związane z opóźnieniami oraz sposób przekazywania predykcji do frontendu.}
+
+\subsection{Przegląd interfejsu użytkownika}
+\label{sec:edu-platform-ui}
+
+\todo{DO UZUPEŁNIENIA: Należy opisać interfejs użytkownika i przebieg interakcji
+(np.\ rozpoznawanie na żywo z wykorzystaniem kamery internetowej, strukturę lekcji
+ i quizów, informację zwrotną dla osoby uczącej się), a po zaimplementowaniu
+zamieścić zrzuty ekranu głównych widoków. Uwaga: repozytorium projektu zawiera już
+wersję demonstracyjną rozpoznawania na żywo z kamery internetowej, łączącą enkoder
+Transformer z wyszukiwaniem za pomocą FAISS (commit ``live recognition
+Transformer + FAISS''), co stanowi naturalny punkt wyjścia dla tego podrozdziału.}

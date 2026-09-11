@@ -1,0 +1,108 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Rozdział 1: Wprowadzenie
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Wprowadzenie}
+\label{chap:introduction}
+
+\subsection{Motywacja i kontekst}
+\label{sec:motivation-context}
+
+Języki migowe są pełnoprawnymi językami naturalnymi, posiadającymi własne zasoby
+leksykalne, gramatykę i struktury morfosyntaktyczne, niezależne od języków
+fonicznych, z którymi współistnieją. Wbrew powszechnemu przekonaniu nie są one ani
+uniwersalne, ani nie stanowią manualnej transliteracji mowy: amerykański język
+migowy (ASL), brytyjski język migowy (BSL), niemiecki język migowy (DGS) i polski
+język migowy (PJM) nie są wzajemnie zrozumiałe, a gramatyka języka migowego często
+nie przypomina gramatyki języka fonicznego używanego w jego otoczeniu. Na przykład
+ASL nie stosuje angielskiego szyku wyrazów, a informacje gramatyczne -- negację,
+pytania czy warunkowość -- przekazuje za pomocą wykładników niemanualnych, takich
+jak mimika twarzy, pozycja głowy i kierunek spojrzenia, równolegle z manualną
+artykulacją znaków. Dla społeczności Głuchych i osób słabosłyszących, dla których
+język migowy jest podstawowym językiem komunikacji, ta odrębność stwarza
+rzeczywistą barierę w porozumiewaniu się ze słyszącą większością i uzasadnia
+rozwój systemów automatycznego tłumaczenia języka migowego.
+
+Automatyczne tłumaczenie języka migowego nie jest pojedynczym zadaniem, lecz
+zbiorem powiązanych ze sobą podproblemów. Tłumaczenie między językiem fonicznym
+a językiem migowym może przebiegać w obu kierunkach i zazwyczaj jest dzielone
+na etapy z wykorzystaniem pośredniej reprezentacji symbolicznej w postaci
+\emph{glos}. Zapis glosowy jest pisemną transkrypcją sekwencji znaków, zwykle
+przedstawianą za pomocą wyrazów języka fonicznego zapisanych wielkimi literami.
+Określa on, jakie znaki są wykonywane i w jakiej kolejności, pomijając ich
+realizację wizualną. Na przykład wypowiedź w DGS zapisana glosami jako
+ICH OSTERN WETTER ZUFRIEDEN odpowiada naturalnemu zdaniu niemieckiemu
+``Da k\"onnen wir mit unserem Osterwetter eigentlich ganz zufrieden sein'' --
+co pokazuje, że zapis glosowy jest zwięzłą, stratną reprezentacją pośrednią,
+a nie pełnym tłumaczeniem. Taki podział prowadzi do czterech zadań kierunkowych:
+przekształcania wideo w glosy i glos w tekst po stronie rozpoznawania oraz
+tekstu w glosy i glos w wideo z wykorzystaniem awatara po stronie generowania.
+Zadania te oraz miejsce niniejszego projektu wśród nich omówiono bardziej
+szczegółowo w rozdziale~\ref{chap:related-work}.
+
+Ze względu na ograniczoną dostępność anotowanych danych do badań nad językami
+migowymi oraz praktyczną potrzebę narzędzi do ich gromadzenia i oznaczania projekt
+łączy prace badawcze z pracami programistycznymi. Część badawcza koncentruje się
+na rozpoznawaniu glos na podstawie wideo oraz rozszerzeniu tego podejścia
+w kierunku tłumaczenia ciągłych wypowiedzi na poziomie zdań. Część programistyczna
+obejmuje budowę wspierającej infrastruktury oprogramowania -- platformy do
+anotacji danych oraz edukacyjnej platformy demonstracyjnej -- niezbędnej do
+gromadzenia danych treningowych i prezentowania opracowanych modeli użytkownikom
+końcowym.
+
+\subsection{Cele i zakres}
+\label{sec:goals-scope}
+
+Głównym celem projektu jest zbadanie, opracowanie i wdrożenie metod tłumaczenia
+języka migowego na język pisany lub mowę, a także stworzenie towarzyszących im
+systemów informatycznych, które zapewnią odtwarzalność badań i umożliwią
+praktyczne wykorzystanie ich wyników. Ze względu na ograniczone zasoby danych
+dostępne na rynku projekt koncentruje się zarówno na samym problemie badawczym,
+jak i na stworzeniu kompleksowego systemu o wymiernej wartości praktycznej
+i naukowej. W szczególności projekt zakłada realizację następujących celów:
+
+\begin{itemize}
+  \item zaprojektowanie i wdrożenie zdecentralizowanej platformy do anotacji
+        danych, służącej do gromadzenia i oznaczania zbiorów nagrań wideo
+        w języku migowym;
+  \item opracowanie i ocena modelu rozpoznawania izolowanych znaków migowych
+        na podstawie wideo (wideo--glosy), z porównaniem wielu architektur
+        enkoderów czasowych w identycznych warunkach eksperymentalnych;
+  \item zbadanie tłumaczenia między sekwencjami glos a tekstem w języku
+        naturalnym w obu kierunkach (glosy--tekst i tekst--glosy);
+  \item integrację komponentów rozpoznawania izolowanych znaków i tłumaczenia
+        w całościowy potok przetwarzania wideo na tekst na poziomie zdań;
+  \item dostarczenie platformy edukacyjnej prezentującej wytrenowane modele
+        użytkownikom końcowym za pośrednictwem przystępnego interfejsu.
+\end{itemize}
+
+\todo{DO UZUPEŁNIENIA: Należy precyzyjnie określić granice zakresu pracy -- jakie
+języki migowe i zbiory danych są objęte badaniami, co wyraźnie wykracza poza
+zakres pracy (np. tłumaczenie ciągłe lub w czasie rzeczywistym, wdrożenie
+obsługujące wiele osób migających, generowanie wypowiedzi z wykorzystaniem
+awatara) oraz jakie ograniczenia wynikają z danych źródłowych (np. wyłącznie
+izolowane, uprzednio wyodrębnione znaki).}
+
+\subsection{Struktura pracy}
+\label{sec:thesis-structure}
+
+Dalsza część pracy ma następującą strukturę.
+Rozdział~\ref{chap:related-work} zawiera przegląd dotychczasowych badań nad
+rozpoznawaniem i tłumaczeniem języka migowego, obejmujący metody przekształcania
+wideo w glosy, modele przetwarzania języka naturalnego (NLP) stosowane do języka
+migowego oraz istniejące systemy i benchmarki.
+Rozdział~\ref{chap:annotation-platform} opisuje platformę do anotacji stworzoną
+w celu gromadzenia i oznaczania zbiorów nagrań wideo wykorzystywanych w pracy.
+Rozdział~\ref{chap:isolated-gloss-recognition} przedstawia model rozpoznawania
+izolowanych glos (wideo--glosy), w tym zbiór danych, potok przetwarzania wstępnego,
+architekturę modelu i wyniki eksperymentów.
+Rozdział~\ref{chap:text-translation} dotyczy tłumaczenia między sekwencjami glos
+a tekstem w języku naturalnym.
+Rozdział~\ref{chap:sentence-level-translation} opisuje integrację komponentów
+z rozdziałów~\ref{chap:isolated-gloss-recognition} i~\ref{chap:text-translation}
+w całościowy potok przetwarzania wideo na tekst na poziomie zdań.
+Rozdział~\ref{chap:educational-platform} przedstawia platformę edukacyjną
+prezentującą opracowane modele użytkownikom końcowym.
+Na zakończenie rozdział~\ref{chap:conclusions} podsumowuje realizację wskazanych
+wyżej celów, omawia ograniczenia opracowanego systemu i nakreśla kierunki
+dalszych prac.

@@ -1,0 +1,57 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Rozdział 5: Tłumaczenie tekstu (gloss2text / text2gloss)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Tłumaczenie tekstu (gloss2text / text2gloss)}
+\label{chap:text-translation}
+
+W rozdziale~\ref{chap:isolated-gloss-recognition} omówiono etap wideo--glosy
+potoku przetwarzania wprowadzonego w podrozdziale~\ref{sec:motivation-context},
+polegający na przekształcaniu wyodrębnionego nagrania znaku migowego w etykietę
+glosy. Niniejszy rozdział dotyczy pozostałego etapu przejścia między reprezentacją
+symboliczną a językiem naturalnym: tłumaczenia między sekwencjami glos a tekstem
+w języku naturalnym w obu kierunkach -- glosy--tekst i tekst--glosy. Pozwala to
+przekształcać rozpoznane sekwencje glos w płynne, naturalne zdania, a kierunek
+odwrotny wykorzystywać do augmentacji danych i ewaluacji.
+
+Aktualna implementacja modułu rozpoznawania w czasie rzeczywistym tworzy już
+uporządkowaną sekwencję rozpoznanych etykiet glos. Sekwencja ta jest wyświetlana
+w interfejsie i może zostać wyczyszczona lub skrócona o ostatnią glosę; stanowi
+ona bezpośredni interfejs wejściowy dla przyszłego modułu gloss2text. W obecnym
+stanie projektu nie zaimplementowano jeszcze modelu tłumaczącego tę sekwencję
+na zdanie języka naturalnego. Z tego względu niniejszy rozdział opisuje
+planowany etap tłumaczenia, a nie działający element potoku wnioskowania.
+\todo{DO UZUPEŁNIENIA: Tematyka tego rozdziału nie została jeszcze uwzględniona
+w dotychczasowych raportach z prac badawczych i programistycznych projektu.
+Rozdział należy opracować po przeprowadzeniu eksperymentów z tłumaczeniem między
+glosami a tekstem. Poniższe podrozdziały przedstawiają jego planowaną strukturę.}
+
+\subsection{Podejście i dane}
+\label{sec:text-translation-approach-data}
+
+\todo{DO UZUPEŁNIENIA: Należy opisać równoległy korpus glos i tekstu (lub korpusy)
+wykorzystywany do trenowania i ewaluacji, sposób pozyskiwania sekwencji glos
+z wyników etapu wideo--glosy opisanego
+w rozdziale~\ref{chap:isolated-gloss-recognition} lub z istniejących anotowanych
+korpusów, zastosowane metody czyszczenia i normalizacji sekwencji glos oraz tekstu,
+a także metodykę podziału danych na zbiory treningowy, walidacyjny i testowy.}
+
+\subsection{Model i trenowanie}
+\label{sec:text-translation-model-training}
+
+\todo{DO UZUPEŁNIENIA: Należy opisać architekturę typu sekwencja--sekwencja
+wykorzystywaną do tłumaczenia gloss2text i text2gloss (np.\ transformer
+w architekturze enkoder--dekoder, dostrajanie wstępnie wytrenowanego modelu
+językowego), strategię tokenizacji glos, funkcję celu uczenia, optymalizator
+oraz hiperparametry. Wybory architektoniczne należy odnieść do modeli NLP
+omówionych w podrozdziale~\ref{sec:nlp-models-sign-language}.}
+
+\subsection{Ewaluacja w obu kierunkach}
+\label{sec:text-translation-evaluation}
+
+\todo{DO UZUPEŁNIENIA: Należy przedstawić wyniki ilościowe dla obu kierunków
+ tłumaczenia -- glosy--tekst i tekst--glosy (np.\ BLEU, ROUGE lub inne odpowiednio
+ dobrane metryki tłumaczenia maszynowego), przykłady jakościowe uzyskanych
+ tłumaczeń oraz analizę typowych błędów. Ewaluacja ta zostanie ponownie
+ wykorzystana do oceny etapu tłumaczenia tekstu w całościowym potoku przetwarzania,
+ ocenianym w rozdziale~\ref{chap:sentence-level-translation}.}

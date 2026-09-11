@@ -1,0 +1,75 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Rozdział 6: Tłumaczenie na poziomie zdań (video2text)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Rozpoznawanie sekwencji gestów w czasie rzeczywistym}
+\label{chap:sentence-level-translation}
+
+Rozdział~\ref{chap:isolated-gloss-recognition} opisuje model, który
+przekształca sekwencję punktów charakterystycznych w embedding i wyszukuje
+podobne nagrania referencyjne w bazie FAISS. W praktycznej aplikacji dane
+pochodzą jednak z nieprzerwanego strumienia kamery. System musi więc
+decydować, które fragmenty strumienia przekazywać do modelu i kiedy uznać
+predykcję za wystarczająco stabilną. W tym rozdziale opisano dwa
+zaimplementowane tryby rozpoznawania w czasie rzeczywistym: segmentację
+gestów rozdzielonych pauzą oraz ciągłe rozpoznawanie z wykorzystaniem okna
+przesuwnego.
+
+\subsection{Całościowy potok przetwarzania}
+\label{sec:sentence-level-pipeline}
+
+Każda klatka strumienia kamery jest analizowana przez MediaPipe Hands i
+MediaPipe Pose, a wynik jest zapisywany jako 144-wymiarowy wektor punktów
+charakterystycznych. Wybrany fragment sekwencji przechodzi identyczne
+przetwarzanie wstępne jak dane treningowe: interpolację braków, usunięcie
+klatek statycznych, wygładzanie, normalizację przestrzenną oraz resampling
+do 60 klatek. Enkoder neuronowy tworzy następnie 64-wymiarowy embedding,
+który jest porównywany z embeddingami referencyjnymi w indeksie FAISS.
+
+W trybie segmentacji rozpoznawanie rozpoczyna się po trzech kolejnych klatkach
+z wykrytą dłonią. Punkty są gromadzone w buforze o maksymalnej długości
+150 klatek, a segment zostaje zamknięty po dziesięciu kolejnych klatkach bez
+wykrytej dłoni albo po zapełnieniu bufora. Sekwencje krótsze niż osiem klatek
+są odrzucane. Tryb ten jest przeznaczony dla gestów rozdzielonych wyraźną pauzą.
+
+Tryb ciągły wykorzystuje okno przesuwne. Po wykryciu aktywności dłoni system
+rozpoczyna rejestrowanie po jednej aktywnej klatce i utrzymuje bufor pięciu
+najnowszych klatek. Po jego zapełnieniu wnioskowanie jest wykonywane co dwie
+nowe klatki, dlatego kolejne okna częściowo się pokrywają. Do modelu trafia
+zawsze sekwencja po resamplingu do 60 klatek, zgodna z formatem treningowym.
+Predykcja jest rozważana tylko wtedy, gdy dłoń wykryto w co najmniej $60\%$
+klatek okna.
+
+Wyszukiwanie FAISS zwraca etykietę, podobieństwo \emph{score} oraz margines
+\emph{margin} względem najlepszej klasy konkurencyjnej. Dla bazy podstawowej
+akceptowane są wyniki o $score \geq 0.90$ i $margin \geq 0.03$; dla bazy
+utworzonej z własnych nagrań stosowany jest próg $score \geq 0.75$ przy tym
+samym minimalnym marginesie. Aby ograniczyć migotanie wyniku, system analizuje
+trzy ostatnie pewne predykcje i akceptuje glosę, gdy co najmniej dwie z nich
+wskazują tę samą etykietę, a ostatnia predykcja również ma tę etykietę.
+Po zaakceptowaniu glosa jest blokowana przed ponownym dodaniem; zmiana etykiety
+wymaga trzech stabilnych predykcji nowej klasy. Dodatkowo stosowany jest
+trzyklatkowy okres chłodzenia. Po trzech kolejnych klatkach bez wykrytej dłoni
+bufory są czyszczone, a system wraca do stanu oczekiwania.
+
+\subsection{Integracja modułów z rozdziałów~\ref{chap:isolated-gloss-recognition} i~\ref{chap:text-translation}}
+\label{sec:sentence-level-integration}
+
+Zaakceptowane glosy są dopisywane do pamięci bieżącej sekwencji i wyświetlane
+w interfejsie użytkownika. Użytkownik może wyczyścić całą sekwencję lub usunąć
+ostatnią glosę. Pamięć ta stanowi interfejs dla planowanego modułu gloss2text
+opisanego w Rozdziale~\ref{chap:text-translation}, lecz aktualna wersja nie
+generuje jeszcze zdań języka naturalnego. Zaimplementowano więc ciągłe
+rozpoznawanie sekwencji glos, a nie pełny potok video2text.
+
+\subsection{Eksperymenty i wyniki}
+\label{sec:sentence-level-experiments}
+
+Implementacja udostępnia tryb diagnostyczny. Dla każdej próby zapisywane są
+prawdziwa i przewidziana etykieta, poprawność predykcji, podobieństwo oraz
+margines. Pozwala to analizować nie tylko dokładność rozpoznania, lecz również
+pewność decyzji podejmowanych przez wyszukiwanie FAISS i stabilizator.
+
+Pełna ocena tłumaczenia video2text wymaga jeszcze modułu gloss2text oraz
+nagrań ciągłych z referencyjnymi zdaniami. Po jego dodaniu należy rozdzielić
+błędy rozpoznania glos od błędów tłumaczenia sekwencji glos na tekst.

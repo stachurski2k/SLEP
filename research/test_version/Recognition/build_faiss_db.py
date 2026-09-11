@@ -13,21 +13,15 @@ from DataProcessing.collector import create_landmarkers, process_video
 from DataProcessing.preprocessing import preprocess
 from Recognition.recognition_utils import load_encoder, embed_sequence
 
-MODEL = TransformerEncoder
-
-TRAIN_EMBEDDINGS_PATH = Path(f"Models/{MODEL.__name__}_Checkpoints/train_embeddings.npz")
-MODEL_CHECKPOINT_PATH = Path(f"Models/{MODEL.__name__}_Checkpoints/best_encoder.pt")
-FAISS_DB_DIR = Path(f"Recognition/{MODEL.__name__}_db")
-FAISS_INDEX_PATH = FAISS_DB_DIR / "index.faiss"
-FAISS_LABELS_PATH = FAISS_DB_DIR / "index_labels.npz"
-
+DEFAULT_MODEL = TransformerEncoder
 TARGET_LEN = 60
+
 
 def build_index_from_arrays(
     embeddings: np.ndarray,
     labels: np.ndarray,
     id_to_label: np.ndarray,
-    output_dir: Path = FAISS_DB_DIR,
+    output_dir: Path,
 ) -> None:
     output_dir = Path(output_dir)
     faiss_index_path = output_dir / "index.faiss"
@@ -42,11 +36,19 @@ def build_index_from_arrays(
 
 
 def build_index_from_npz(
-    npz_path: Path = TRAIN_EMBEDDINGS_PATH,
-    output_dir: Path = FAISS_DB_DIR,
+    model_cls: type = DEFAULT_MODEL,
+    npz_path: Path | None = None,
+    output_dir: Path | None = None,
+    key: str = "embeddings",
 ) -> None:
+    model_name = model_cls.__name__
+    if npz_path is None:
+        npz_path = Path(f"Models/{model_name}_Checkpoints/train_embeddings.npz")
+    if output_dir is None:
+        output_dir = Path("Recognition") / f"{model_name}_db_base"
+
     with np.load(npz_path, allow_pickle=True) as data:
-        embeddings = data["embeddings"]
+        embeddings = data[key]
         labels = data["labels"]
         id_to_label = data["id_to_label"]
     
@@ -60,11 +62,18 @@ def build_index_from_npz(
 
 def build_index_from_videos(
     dataset_dir: Path,
-    checkpoint_path: Path = MODEL_CHECKPOINT_PATH,
+    model_cls: type = DEFAULT_MODEL,
+    checkpoint_path: Path | None = None,
     device: str | None = None,
     target_len: int = TARGET_LEN,
-    output_dir: Path = FAISS_DB_DIR,
+    output_dir: Path | None = None,
 ) -> None:
+    model_name = model_cls.__name__
+    if checkpoint_path is None:
+        checkpoint_path = Path(f"Models/{model_name}_Checkpoints/best_encoder.pt")
+    if output_dir is None:
+        output_dir = Path("Recognition") / f"{model_name}_db_custom"
+
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -72,7 +81,7 @@ def build_index_from_videos(
     gesture_dirs = sorted(d for d in dataset_dir.iterdir() if d.is_dir())
 
     if not gesture_dirs:
-        raise ValueError(f"[build_faiss_db] Dir not found: {dataset_dir}")
+        raise ValueError(f"[build_faiss_db] Dir not found or empty: {dataset_dir}")
 
     class_names = [d.name for d in gesture_dirs]
     label_to_id = {name: idx for idx, name in enumerate(class_names)}
@@ -81,7 +90,7 @@ def build_index_from_videos(
     print(f"[build_faiss_db] Found {len(class_names)} classes")
     print(f"[build_faiss_db] Loading encoder from: {checkpoint_path} (device={device})")
 
-    encoder_bundle = load_encoder(checkpoint_path, MODEL, device)
+    encoder_bundle = load_encoder(checkpoint_path, model_cls, device)
 
     all_embeddings: list[np.ndarray] = []
     all_labels: list[int] = []
@@ -96,7 +105,7 @@ def build_index_from_videos(
             video_files = sorted(gesture_dir.glob("*.mp4"))
 
             if not video_files:
-                print(f"  [SKIP] {gesture_name}: .mp4 not found ")
+                print(f"  [SKIP] {gesture_name}: .mp4 not found")
                 continue
 
             print(f"\n  Video processing '{gesture_name}' ({len(video_files)})...")
@@ -117,7 +126,7 @@ def build_index_from_videos(
                     all_embeddings.append(embedding.reshape(-1))
                     all_labels.append(label_id)
 
-                    print(f"    {video_path.name}: OK  embedding shape={embedding.shape}")
+                    print(f"    {video_path.name}: OK embedding shape={embedding.shape}")
                 except Exception as exc:
                     print(f"    [ERR] {video_path.name}: {exc}")
 
@@ -151,35 +160,38 @@ if __name__ == "__main__":
 
     # --- npz mode ---
     p_npz = subparsers.add_parser("npz", help="Build index from train_embeddings.npz file")
-    p_npz.add_argument("--path", type=Path, default=TRAIN_EMBEDDINGS_PATH,
+    p_npz.add_argument("--path", type=Path, default=None,
                        help="Path to .npz file with embeddings")
     p_npz.add_argument("--key", type=str, default="embeddings",
                        help="Key of embeddings in .npz file")
-    p_npz.add_argument("--output-dir", type=Path, default=FAISS_DB_DIR,
+    p_npz.add_argument("--output-dir", type=Path, default=None,
                        help="Directory where index.faiss and index_labels.npz are written")
 
     # --- video mode ---
     p_vid = subparsers.add_parser("videos", help="Build index directly from mp4 recordings")
     p_vid.add_argument("dataset_dir", type=Path,
                        help="Directory with gesture class subfolders (e.g. Dataset_test/)")
-    p_vid.add_argument("--checkpoint", type=Path, default=MODEL_CHECKPOINT_PATH,
+    p_vid.add_argument("--checkpoint", type=Path, default=None,
                        help="Path to encoder checkpoint (.pt)")
     p_vid.add_argument("--device", type=str, default=None,
                        help="'cuda' or 'cpu' (autodetect)")
     p_vid.add_argument("--target-len", type=int, default=TARGET_LEN,
                        help=f"Target sequence length (default: {TARGET_LEN})")
-    p_vid.add_argument("--output-dir", type=Path, default=FAISS_DB_DIR,
+    p_vid.add_argument("--output-dir", type=Path, default=None,
                        help="Directory where index.faiss and index_labels.npz are written")
 
     args = parser.parse_args()
 
     if args.mode == "npz":
-        build_index_from_npz(npz_path=args.path, output_dir=args.output_dir)
+        build_index_from_npz(model_cls=DEFAULT_MODEL, npz_path=args.path, output_dir=args.output_dir, key=args.key)
     elif args.mode == "videos":
         build_index_from_videos(
             dataset_dir=args.dataset_dir,
+            model_cls=DEFAULT_MODEL,
             checkpoint_path=args.checkpoint,
             device=args.device,
             target_len=args.target_len,
             output_dir=args.output_dir,
         )
+
+

@@ -1,4 +1,3 @@
-import csv
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -10,52 +9,10 @@ import torch.nn as nn
 from DataProcessing.preprocessing import preprocess
 from Recognition.faiss_dtw import faiss_search
 
-class SegmenterState(Enum):
-    IDLE = auto()
+
+class RecognizerState(Enum):
+    WAITING = auto()
     RECORDING = auto()
-
-
-@dataclass
-class GestureSegmenter:
-    activity_start_frames: int = 3
-    activity_end_frames: int = 10
-    max_buffer_frames: int = 150
-    min_gesture_frames: int = 8
-    state: SegmenterState = SegmenterState.IDLE
-    active_streak: int = 0
-    inactive_streak: int = 0
-    buffer: deque = field(init=False)
-
-    def __post_init__(self):
-        self.buffer = deque(maxlen=self.max_buffer_frames)
-
-    def update(self, feature_vector: np.ndarray, hand_detected: bool) -> np.ndarray | None:
-        if hand_detected:
-            self.active_streak += 1
-            self.inactive_streak = 0
-        else:
-            self.inactive_streak += 1
-            self.active_streak = 0
-
-        if self.state == SegmenterState.IDLE:
-            if self.active_streak >= self.activity_start_frames:
-                self.state = SegmenterState.RECORDING
-                self.buffer.clear()
-                self.buffer.append(feature_vector)
-            return None
-
-        # state == RECORDING
-        self.buffer.append(feature_vector)
-
-        if self.inactive_streak >= self.activity_end_frames or len(self.buffer) >= self.max_buffer_frames:
-            self.state = SegmenterState.IDLE
-            sequence = np.array(self.buffer, dtype=np.float32)
-            self.buffer.clear()
-            self.active_streak = 0
-            self.inactive_streak = 0
-            return sequence if sequence.shape[0] >= self.min_gesture_frames else None
-
-        return None
 
 
 @dataclass
@@ -65,10 +22,17 @@ class EncoderBundle:
     normalize_embeddings: bool
 
 
-def load_encoder(checkpoint_path: Path, model: nn.Module, device: str) -> EncoderBundle:
+@dataclass
+class RecognitionResult:
+    label: str
+    score: float
+    margin: float
+
+
+def load_encoder(checkpoint_path: Path, model_cls: type[nn.Module], device: str) -> EncoderBundle:
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
-    model = model(
+    model = model_cls(
         input_dim=config["input_dim"],
         hidden_dim=config["hidden_dim"],
         num_layers=config["num_layers"],
@@ -77,6 +41,10 @@ def load_encoder(checkpoint_path: Path, model: nn.Module, device: str) -> Encode
     model.load_state_dict(checkpoint["model_state"])
     model.to(device)
     model.eval()
+
+    with torch.no_grad():
+        dummy = torch.zeros(1, config.get("target_len", 60), config["input_dim"], device=device)
+        model(dummy)
 
     return EncoderBundle(
         model=model,
@@ -87,7 +55,7 @@ def load_encoder(checkpoint_path: Path, model: nn.Module, device: str) -> Encode
 
 @torch.no_grad()
 def embed_sequence(bundle: EncoderBundle, preprocessed_sequence: np.ndarray, device: str) -> np.ndarray:
-    x = torch.tensor(preprocessed_sequence, dtype=torch.float32, device=device).unsqueeze(0)  # [1, 60, 144]
+    x = torch.tensor(preprocessed_sequence, dtype=torch.float32, device=device).unsqueeze(0)  # [1, target_len, feat_dim]
     embedding, _ = bundle.model(x)
 
     if bundle.normalize_embeddings:
@@ -96,10 +64,31 @@ def embed_sequence(bundle: EncoderBundle, preprocessed_sequence: np.ndarray, dev
     return embedding.cpu().numpy()
 
 
-def recognize_gesture(embedding: np.ndarray, faiss_index, train_labels, id_to_label, k: int) -> str:
-    candidate_indices = faiss_search(faiss_index, embedding.reshape(-1), k)
-    predicted_label_id = train_labels[candidate_indices[0]]
-    return str(id_to_label[predicted_label_id])
+def recognize_gesture(embedding: np.ndarray, faiss_index, train_labels, id_to_label, k: int) -> RecognitionResult:
+    class_count = len(id_to_label)
+    search_k = min(getattr(faiss_index, "ntotal", max(20, k)), max(20, k, class_count * 3))
+    scores, candidate_indices = faiss_search(faiss_index, embedding.reshape(-1), search_k)
+
+    best_index = candidate_indices[0]
+    if best_index == -1:
+        raise ValueError("FAISS returned no valid neighbors")
+
+    predicted_label_id = train_labels[best_index]
+    label = str(id_to_label[predicted_label_id])
+    score = float(scores[0])
+
+    margin = float("inf")
+    for candidate_score, candidate_index in zip(scores[1:], candidate_indices[1:]):
+        if candidate_index == -1:
+            continue
+
+        candidate_label_id = train_labels[candidate_index]
+        candidate_label = str(id_to_label[candidate_label_id])
+        if candidate_label != label:
+            margin = score - float(candidate_score)
+            break
+
+    return RecognitionResult(label=label, score=score, margin=margin)
 
 
 def try_recognize(raw_sequence, encoder_bundle, faiss_index, train_labels, id_to_label, device, target_len, k=1):
@@ -110,6 +99,225 @@ def try_recognize(raw_sequence, encoder_bundle, faiss_index, train_labels, id_to
     except Exception as exc:
         print(f"Error processing: {exc}")
         return None
+
+
+@dataclass
+class BaseGestureRecognizer:
+    encoder_bundle: EncoderBundle
+    faiss_index: object
+    train_labels: np.ndarray
+    id_to_label: np.ndarray
+    device: str
+    activity_start_frames: int = 3
+    activity_end_frames: int = 10
+    target_len: int = 60
+    top_k: int = 1
+
+    state: RecognizerState = field(default=RecognizerState.WAITING, init=False)
+    active_streak: int = field(default=0, init=False)
+    inactive_streak: int = field(default=0, init=False)
+
+    @property
+    def status(self) -> str:
+        return self.state.name
+
+    def _update_streaks(self, hand_detected: bool) -> None:
+        if hand_detected:
+            self.active_streak += 1
+            self.inactive_streak = 0
+        else:
+            self.inactive_streak += 1
+            self.active_streak = 0
+
+    def _recognize(self, sequence: np.ndarray) -> RecognitionResult | None:
+        return try_recognize(
+            sequence,
+            self.encoder_bundle,
+            self.faiss_index,
+            self.train_labels,
+            self.id_to_label,
+            self.device,
+            self.target_len,
+            self.top_k,
+        )
+
+
+@dataclass
+class GestureSegmenter(BaseGestureRecognizer):
+    max_buffer_frames: int = 150
+    min_gesture_frames: int = 8
+
+    buffer: deque = field(init=False)
+
+    def __post_init__(self):
+        self.buffer = deque(maxlen=self.max_buffer_frames)
+
+    def update(self, feature_vector: np.ndarray, hand_detected: bool) -> RecognitionResult | None:
+        self._update_streaks(hand_detected)
+
+        if self.state == RecognizerState.WAITING:
+            if self.active_streak >= self.activity_start_frames:
+                self.state = RecognizerState.RECORDING
+                self.buffer.clear()
+                self.buffer.append(feature_vector)
+            return None
+
+        self.buffer.append(feature_vector)
+
+        if self.inactive_streak >= self.activity_end_frames or len(self.buffer) >= self.max_buffer_frames:
+            self.state = RecognizerState.WAITING
+            sequence = np.array(self.buffer, dtype=np.float32)
+            self.buffer.clear()
+            self.active_streak = 0
+            self.inactive_streak = 0
+            if sequence.shape[0] < self.min_gesture_frames:
+                return None
+
+            return self._recognize(sequence)
+
+        return None
+
+
+@dataclass
+class SlidingWindowRecognizer(BaseGestureRecognizer):
+    activity_end_frames: int = 3
+    window_frames: int = 90
+    step_frames: int = 5
+    min_score: float = 0.75
+    min_margin: float = 0.03
+    custom_min_score: float = 0.5
+    custom_min_margin: float = 0.03
+    stability_window: int = 4
+    required_votes: int = 3
+    cooldown_frames: int = 20
+    min_hand_ratio: float = 0.5
+    switch_required_votes: int = 3
+    is_custom_database: bool = False
+
+    frame_buffer: deque = field(init=False)
+    hand_buffer: deque = field(init=False)
+    candidates: deque[RecognitionResult] = field(init=False)
+    switch_candidates: deque[RecognitionResult] = field(init=False)
+    frame_count: int = field(default=0, init=False)
+    cooldown_left: int = field(default=0, init=False)
+    locked_label: str | None = field(default=None, init=False)
+    last_candidate: RecognitionResult | None = field(default=None, init=False)
+
+    def __post_init__(self):
+        self.frame_buffer = deque(maxlen=self.window_frames)
+        self.hand_buffer = deque(maxlen=self.window_frames)
+        self.candidates = deque(maxlen=self.stability_window)
+        self.switch_candidates = deque(maxlen=self.stability_window)
+
+    def update(self, feature_vector: np.ndarray, hand_detected: bool) -> RecognitionResult | None:
+        self._update_streaks(hand_detected)
+
+        if self.state == RecognizerState.WAITING:
+            if self.active_streak >= self.activity_start_frames:
+                self.state = RecognizerState.RECORDING
+                self._clear_recording_buffers()
+                self._append_frame(feature_vector, hand_detected)
+            return None
+
+        self.frame_count += 1
+        self._append_frame(feature_vector, hand_detected)
+
+        if self.cooldown_left > 0:
+            self.cooldown_left -= 1
+
+        if self.inactive_streak >= self.activity_end_frames:
+            self._reset()
+            return None
+
+        if not hand_detected:
+            return None
+
+        if len(self.frame_buffer) < self.window_frames:
+            return None
+
+        if self.frame_count % self.step_frames != 0:
+            return None
+
+        if np.mean(self.hand_buffer) < self.min_hand_ratio:
+            self._reset()
+            return None
+
+        result = self._recognize(np.array(self.frame_buffer, dtype=np.float32))
+
+        if result is None or not self._is_confident(result):
+            self.candidates.clear()
+            self.last_candidate = result
+            return None
+
+        self.last_candidate = result
+
+        if self.locked_label is not None:
+            return self._handle_locked_state(result)
+
+        self.candidates.append(result)
+        stable_result = self._stable_result(self.candidates, self.required_votes)
+        if stable_result is None:
+            return None
+
+        self.locked_label = stable_result.label
+        self.cooldown_left = self.cooldown_frames
+        self.candidates.clear()
+        return stable_result
+
+    def _is_confident(self, result: RecognitionResult) -> bool:
+        if self.is_custom_database:
+            return result.score >= self.custom_min_score and result.margin >= self.custom_min_margin
+        return result.score >= self.min_score and result.margin >= self.min_margin
+
+    def _stable_result(self, results: deque[RecognitionResult], required_votes: int) -> RecognitionResult | None:
+        if len(results) < results.maxlen:
+            return None
+
+        labels = [result.label for result in results]
+        best_label = max(set(labels), key=labels.count)
+        if labels.count(best_label) < required_votes or self.cooldown_left > 0:
+            return None
+
+        latest = results[-1]
+        if latest.label != best_label:
+            return None
+
+        return latest
+
+    def _handle_locked_state(self, result: RecognitionResult) -> RecognitionResult | None:
+        if result.label == self.locked_label:
+            self.switch_candidates.clear()
+            return None
+
+        self.switch_candidates.append(result)
+        stable_result = self._stable_result(self.switch_candidates, self.switch_required_votes)
+        if stable_result is None:
+            return None
+
+        self.locked_label = stable_result.label
+        self.cooldown_left = self.cooldown_frames
+        self.switch_candidates.clear()
+        return stable_result
+
+    def _reset(self) -> None:
+        self.state = RecognizerState.WAITING
+        self.active_streak = 0
+        self.inactive_streak = 0
+        self._clear_recording_buffers()
+
+    def _append_frame(self, feature_vector: np.ndarray, hand_detected: bool) -> None:
+        self.frame_buffer.append(feature_vector)
+        self.hand_buffer.append(hand_detected)
+
+    def _clear_recording_buffers(self) -> None:
+        self.frame_buffer.clear()
+        self.hand_buffer.clear()
+        self.candidates.clear()
+        self.switch_candidates.clear()
+        self.frame_count = 0
+        self.cooldown_left = 0
+        self.locked_label = None
+        self.last_candidate = None
 
 
 def draw_hands(frame, hand_result, hand_connections):
@@ -162,4 +370,3 @@ class DiagnosticTrial:
     @property
     def correct(self) -> bool:
         return self.predicted_label == self.true_label
-

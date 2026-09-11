@@ -1,0 +1,203 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Rozdział 2: Przegląd literatury
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Przegląd literatury}
+\label{chap:related-work}
+
+\subsection{Rozpoznawanie i tłumaczenie języka migowego (SLR/SLT)}
+\label{sec:slr-slt-background}
+
+Automatyczne tłumaczenie języka migowego dzieli się na etapy z wykorzystaniem
+pośredniej reprezentacji glosowej, wprowadzonej w rozdziale~\ref{chap:introduction}
+(podrozdział~\ref{sec:motivation-context}). Podział ten prowadzi do czterech zadań
+kierunkowych: \emph{wideo--glosy} i \emph{glosy--tekst} po stronie rozpoznawania
+oraz \emph{tekst--glosy} i \emph{glosy--wideo} z wykorzystaniem awatara po stronie
+generowania. Niniejszy projekt koncentruje się najpierw na etapie wideo--glosy
+(rozdział~\ref{chap:isolated-gloss-recognition}), a następnie obejmuje tłumaczenie
+między glosami a tekstem (rozdział~\ref{chap:text-translation}) oraz integrację
+obu komponentów w potok przetwarzania na poziomie zdań
+(rozdział~\ref{chap:sentence-level-translation}).
+
+Rozpoznawanie glos na podstawie wideo jest nietrywialne nawet w wariancie
+izolowanym, w którym każde nagranie wejściowe zawiera pojedynczy, uprzednio
+wyodrębniony znak. Znak odpowiadający tej samej glosie jest wykonywany odmiennie
+przez różne osoby migające: różnice w układzie dłoni, trajektorii ruchu, tempie
+migania i proporcjach ciała powodują znaczną zmienność wewnątrzklasową.
+Konwencjonalne klasyfikatory z funkcją softmax, które dzielą przestrzeń wejściową
+za pomocą ustalonych granic decyzyjnych, słabo radzą sobie z uwzględnianiem tej
+zmienności, szczególnie przy ograniczonej ilości danych, typowej dla korpusów
+języka migowego. Obserwacja ta uzasadnia przyjęte w niniejszej pracy podejście do
+rozpoznawania izolowanych glos oparte na wyszukiwaniu i uczeniu metryki
+(zob. rozdział~\ref{chap:isolated-gloss-recognition}), w odróżnieniu od dominujących
+podejść klasyfikacyjnych omówionych poniżej.
+
+\subsection{Metody przekształcania wideo w glosy}
+\label{sec:video-to-gloss-methods}
+
+W tym podrozdziale przedstawiono przegląd proponowanych w literaturze architektur
+rozpoznawania izolowanych znaków migowych oraz ciągłych wypowiedzi migowych,
+obejmujący podejścia oparte na szkielecie, wyglądzie oraz rozwiązania hybrydowe.
+
+W pracy \emph{Sign Pose-Based Transformer for Word-Level Sign Language Recognition}
+\cite{bohacek2022spoter} przedstawiono SPOTER -- system, który całkowicie pomija
+surowe klatki RGB i operuje wyłącznie na dwuwymiarowych punktach kluczowych
+szkieletu, uzyskanych za pomocą estymatora pozy (stawy ciała i dłoni). Każda klatka
+jest reprezentowana jako wektor współrzędnych stawów; sekwencja tych wektorów
+z całego nagrania stanowi wejście standardowego transformera o architekturze
+enkoder--dekoder. Pojedynczy uczony token zapytania o klasę wykorzystuje mechanizm
+uwagi nad zakodowaną sekwencją klatek (podobnie jak w podejściu DETR do detekcji
+obiektów), aby uzyskać końcową klasyfikację. Do kluczowych elementów rozwiązania
+należą etap normalizacji, który przeskalowuje współrzędne stawów względem stałego
+układu odniesienia ciała w celu wyeliminowania zmienności wynikającej z różnic
+między osobami i ich odległości od kamery, oraz schemat augmentacji dostosowany
+do danych szkieletowych (losowy obrót stawów, skalowanie i zniekształcenia zbliżone
+do perspektywicznych, stosowane bezpośrednio do punktów kluczowych zamiast do
+pikseli). Raportowane wyniki wskazują na dokładność top-1 wynoszącą 63,18\%
+na większym zbiorze WLASL, obejmującym wiele osób migających, wobec 100\%
+na mniejszym zbiorze LSA64, zarejestrowanym w bardziej kontrolowanych warunkach.
+Pokazuje to, że lekka architektura pozwala znacząco ograniczyć rozmiar modelu
+oraz koszt wnioskowania kosztem pewnego spadku dokładności na zróżnicowanych danych
+o dużym zasobie słownictwa.
+
+Praca \emph{Power Data Classification: A Hybrid of a Novel Local Time Warping and LSTM}
+\cite{li2016ltwlstm} wykorzystuje standardowe podejście LSTM do klasyfikacji
+sekwencji, z funkcją softmax stosowaną do sumy stanów ukrytych. Jej wyróżniającym
+wkładem jest jednak Local Time Warping (LTW), autorska miara odległości, która
+zastępuje dopasowanie DTW oparte na programowaniu dynamicznym nieprzemiennym
+porównaniem lokalnym w oknie o stałej szerokości -- zmniejszając złożoność z $O(nm)$
+do czasu liniowego przy zachowaniu porównywalnej zdolności rozróżniania klas.
+Końcowy klasyfikator łączy na poziomie prawdopodobieństw wyniki klasyfikatora
+jednego najbliższego sąsiada wykorzystującego LTW z wyjściem softmax sieci LSTM.
+W pięciokrotnej walidacji krzyżowej samodzielny model LSTM osiąga dokładność około
+85--88\%, porównywalną z samym klasyfikatorem najbliższego sąsiada opartym na LTW,
+natomiast połączenie obu gałęzi zwiększa dokładność do 89--93\%. Autorzy przypisują
+ten wynik strukturalnie odmiennym błędom popełnianym przez gałąź parametryczną
+i nieparametryczną. Taki schemat łączenia dwóch gałęzi jest strukturalnie
+analogiczny do połączenia wyuczonego enkodera czasowego z wyszukiwaniem opartym
+na FAISS, stanowiącego jedno z rozszerzeń omówionych
+w podrozdziale~\ref{sec:gloss-recognition-discussion}.
+
+W pracy \emph{A Comprehensive Study on Deep Learning-Based Methods for Sign Language
+Recognition} \cite{adaloglou2021comprehensive} ponownie zaimplementowano
+ i wytrenowano kilka rodzin modeli w identycznych warunkach eksperymentalnych
+(te same zbiory danych, przetwarzanie wstępne i podziały danych), aby oddzielić
+wpływ architektury od czynników zakłócających, które zwykle różnią się między
+publikacjami. Oceniane rodziny obejmują klasyfikatory klatek oparte na 2D-CNN,
+sieci 3D-CNN (np.\ sploty czasoprzestrzenne w stylu I3D), hybrydy CNN+RNN oraz
+modele grafowe operujące na punktach kluczowych pozy. Oceniono je osobno dla
+rozpoznawania izolowanych znaków oraz rozpoznawania ciągłych wypowiedzi w języku
+migowym (CSLR, zwykle trenowanego z funkcją straty CTC). Główny wniosek jest taki,
+że żadna architektura nie dominuje we wszystkich zbiorach danych i zadaniach:
+modele oparte na pozie i grafach zwykle lepiej uogólniają na różne osoby migające,
+natomiast modele CNN/3D-CNN oparte na wyglądzie zazwyczaj osiągają wyższe wyniki
+na zbiorach o ograniczonym zróżnicowaniu osób migających. Podkreśla to silną
+zależność raportowanej dokładności od zbioru danych. Ten wniosek metodologiczny
+bezpośrednio uzasadnia przeprowadzone w rozdziale~\ref{chap:isolated-gloss-recognition}
+kontrolowane porównanie pięciu enkoderów czasowych w jednakowych warunkach.
+
+Szerszy przegląd architektur obejmujący zarówno rozpoznawanie, jak i tłumaczenie
+\cite{review2024dlprocessing} omawia podejścia 3D-CNN, w których czasoprzestrzenne
+jądra splotowe stosuje się bezpośrednio do stosów klatek wideo, oraz systemy
+tłumaczenia języka migowego oparte na transformerach (np.\ Camgoza i in.). Te
+ostatnie zastępują potok CNN+RNN mechanizmem samouwagi nad cechami wideo lub
+wyodrębnionymi sekwencjami glos, eliminując ograniczenie wynikające z sekwencyjnego
+przetwarzania w sieciach RNN. Przegląd obejmuje również multimodalne modele
+bazowe wykorzystujące uczenie transferowe, w których enkodery wizualne są
+wstępnie trenowane na dużych korpusach rozpoznawania czynności (np.\ Kinetics),
+a następnie dostrajane na mniejszych zbiorach danych języka migowego. Podejście
+to konsekwentnie poprawia dokładność rozpoznawania w zadaniu docelowym względem
+trenowania od podstaw.
+
+Kilka kolejnych badań charakteryzuje praktyczne możliwości podejść opartych
+na wyglądzie i rozwiązań hybrydowych. Potok GoogLeNet--BiLSTM trenowany na
+nagraniach terenowych, przy niekontrolowanym oświetleniu i tle
+\cite{agri2021bilstm}, osiąga średnią dokładność 76,21\% na autorskim zbiorze danych
+z dziedziny rolnictwa. Jest to wynik wyraźnie niższy od raportowanych dla
+porównywalnych modeli hybrydowych trenowanych na nagraniach studyjnych, co autorzy
+przypisują niekontrolowanym warunkom pozyskiwania danych, a nie słabości
+architektury. Porównanie klasyfikatorów CNN, MLP, RNN, SVM i KNN na statycznych
+obrazach układów dłoni \cite{ann2022recognition} wykazuje skuteczność 99\%
+na zbiorze treningowym liczącym 50\,000 obrazów, jednak odzwierciedla to dopasowanie
+do danych treningowych, a nie zdolność uogólniania; ponadto zastosowany model
+nie obsługuje ciągłych wypowiedzi ani znaków dynamicznych. Przegląd uwzględniający
+modalności danych \cite{modalities2022review} wyróżnia systemy wizyjne (RGB/RGB-D
+jako wejście potoków CNN lub CNN-RNN), systemy oparte na szkielecie lub pozie
+(sekwencje punktów kluczowych jako wejście sieci GCN lub transformerów) oraz
+systemy wykorzystujące czujniki noszone na ciele (IMU/EMG jako wejście sieci RNN).
+Autorzy zauważają, że w benchmarkach multimodalnych, takich jak AUTSL, zazwyczaj
+raportuje się wyższą dokładność niż na jednomodalnych zbiorach RGB dzięki
+dodatkowej informacji rozróżniającej klasy, pochodzącej ze strumieni głębi
+ i danych szkieletowych.
+
+Dwie kolejne architektury bezpośrednio łączą etapy splotowe i rekurencyjne.
+Moduł wejściowy 3D-CNN połączony z warstwami LSTM \cite{cnn3dlstm2023realtime}
+wykonuje splot jednocześnie w wymiarach wysokości, szerokości i czasu, aby
+wyodrębnić cechy przestrzenne uwzględniające ruch bez osobnego etapu obliczania
+przepływu optycznego. Następnie przekazuje uzyskaną sekwencję cech dla danego
+nagrania do warstw LSTM w celu modelowania zależności czasowych o większym zasięgu.
+\emph{Deepsign} \cite{deepsign2022} stosuje pojedynczą warstwę LSTM, po której
+następuje warstwa GRU, do przetwarzania cech wyznaczanych na poziomie klatek.
+W badaniu empirycznym wykazano, że spośród czterech możliwych dwuwarstwowych
+konfiguracji LSTM/GRU najlepsze wyniki daje układ LSTM, a następnie GRU, osiągający
+około 97\% dokładności dla jedenastu klas gestów na autorskim zbiorze danych.
+
+Wreszcie w pracy \emph{Spatial-Temporal Graph Convolutional Networks for Sign Language
+Recognition} \cite{correia2019stgcn} pozycja szkieletu w każdej klatce jest
+reprezentowana jako graf, którego węzłami są stawy, a krawędziami połączenia
+anatomiczne (np.\ nadgarstek--łokieć, łokieć--bark). Przestrzenny splot grafowy
+agreguje informacje między połączonymi stawami w obrębie klatki, natomiast splot
+czasowy łączy ten sam staw w kolejnych klatkach, zgodnie z podejściem ST-GCN,
+pierwotnie opracowanym do ogólnego rozpoznawania czynności na podstawie szkieletu.
+W ten sposób struktura kinematyczna jest jawnie zakodowana jako założenie
+indukcyjne, w przeciwieństwie do podejść, które otrzymują jedynie spłaszczony
+wektor współrzędnych dla każdej klatki. Brak takiego jawnego kodowania stanowi
+ograniczenie architektury modelu przyjętej
+w rozdziale~\ref{chap:isolated-gloss-recognition}; możliwość jego wprowadzenia
+ponownie omówiono w podrozdziale~\ref{sec:gloss-recognition-discussion} jako
+kierunek dalszych prac.
+
+\subsection{Modele NLP dla języka migowego}
+\label{sec:nlp-models-sign-language}
+
+Poza rozpoznawaniem wizualnym tłumaczenie glos na tekst i tekstu na glosy pozwala
+ująć przetwarzanie języka migowego jako problem NLP typu sekwencja--sekwencja.
+Zazwyczaj rozwiązuje się go za pomocą architektur enkoder--dekoder opartych
+na transformerach, operujących na sekwencjach tokenów glos, a nie wyłącznie
+na surowym tekście (zob. systemy tłumaczenia oparte na transformerach wspomniane
+w podrozdziale~\ref{sec:video-to-gloss-methods}
+\cite{review2024dlprocessing}).
+
+\todo{DO UZUPEŁNIENIA: Należy przedstawić przegląd modeli NLP stosowanych
+bezpośrednio do tłumaczenia glos na tekst i tekstu na glosy (gloss2text /
+text2gloss) -- np. modeli tłumaczenia języka migowego typu sekwencja--sekwencja
+oraz opartych na transformerach (Camgoz i in., Sign Language Transformers),
+dostrajania wstępnie wytrenowanych modeli językowych do tłumaczenia glos,
+tłumaczenia wstecznego oraz strategii augmentacji danych dla niewielkich korpusów
+glosowych. Ten podrozdział powinien stanowić uzasadnienie wyborów dotyczących
+modelowania dokonanych w rozdziale~\ref{chap:text-translation}.}
+
+\subsection{Istniejące systemy i benchmarki}
+\label{sec:existing-systems-benchmarks}
+
+Omówione publikacje wykorzystują różnorodne zbiory danych, które stanowią również
+punkt odniesienia przy projektowaniu porównania modeli w niniejszej pracy.
+\textbf{WLASL} i \textbf{LSA64} wykorzystano w pracy \cite{bohacek2022spoter}
+do porównania wyników uzyskiwanych dla dużego zasobu słownictwa prezentowanego
+przez wiele osób migających z wynikami dla mniejszego zasobu zarejestrowanego
+w kontrolowanych warunkach. \textbf{AUTSL} to duży multimodalny zbiór danych
+tureckiego języka migowego, wykorzystywany do oceny modeli bazowych CNN-LSTM
+ i 3D-CNN \cite{modalities2022review}. \textbf{ASLLVD} stanowi podstawę zbioru danych
+szkieletowych udostępnionego wraz z modelem ST-GCN \cite{correia2019stgcn}.
+\textbf{IISL2020} to autorski zbiór danych obejmujący jedenaście klas, używany
+do oceny architektury z ułożonymi kolejno warstwami LSTM i GRU
+w pracy \cite{deepsign2022}. W niniejszej pracy porównanie modeli rozpoznawania
+izolowanych glos przeprowadzono na podzbiorze zbioru \textbf{ASL Citizen}
+(Microsoft, 2023), szczegółowo opisanym
+w podrozdziale~\ref{sec:gloss-recognition-dataset}.
+
+\todo{DO UZUPEŁNIENIA: Należy opisać istniejące całościowe systemy SLR/SLT
+oraz publiczne benchmarki i rankingi wyników (np. How2Sign,
+RWTH-PHOENIX-Weather 2014T, istniejące systemy produkcyjne lub demonstracyjne
+systemy badawcze), wykraczając poza omówione już zbiory danych, oraz odnieść je
+do zakresu niniejszej pracy.}
