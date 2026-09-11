@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from uuid import UUID
-from dataclasses import dataclass, field
-from typing import Optional, List
+from dataclasses import dataclass
 from datetime import datetime
 
-from value_objects import UserRole, Theme
+from .value_objects import UserRole, Theme
 
 
 @dataclass

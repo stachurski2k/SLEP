@@ -1,6 +1,6 @@
 import re
 
-from exceptions import InvalidEmailError
+from .exceptions import InvalidEmailError
 from enum import Enum
 from dataclasses import dataclass
 
