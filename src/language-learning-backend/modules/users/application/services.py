@@ -16,7 +16,7 @@ from .commands import (
     UpdateProfileCommand,
 )
 from .dtos import UserDTO
-from .use_cases import UserApplicationService
+from .interfaces import UserApplicationService
 
 
 class UserApplicationServiceImpl(UserApplicationService):
