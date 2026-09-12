@@ -9,3 +9,10 @@ class UserNotFoundError(LookupError):
     Error when user does not exist
     """
     pass
+
+
+class UserAlreadyExistsError(ValueError):
+    """
+    Error when user with given email or username already exists
+    """
+    pass
