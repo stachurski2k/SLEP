@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# Model/embedding artifacts are fetched by scripts/fetch_artifacts.py, not committed.
+storage/mediapipe/*
+!storage/mediapipe/.gitkeep
+storage/encoder/*
+!storage/encoder/.gitkeep
+storage/embeddings/*
+!storage/embeddings/.gitkeep
