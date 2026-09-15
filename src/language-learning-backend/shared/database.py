@@ -19,7 +19,7 @@ except ImportError:
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/slep"
+    "postgresql+asyncpg://postgres:postgres@localhost:5435/slep"
 )
 
 engine = create_async_engine(
