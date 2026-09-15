@@ -1,5 +1,6 @@
 from uuid import UUID
 from abc import ABC, abstractmethod
+from typing import List
 
 from .value_objects import Email
 from .entities import User
@@ -11,6 +12,10 @@ class UserRepository(ABC):
 
     @abstractmethod
     async def get_by_id(self, user_id: UUID) -> User | None:
+        ...
+
+    @abstractmethod
+    async def get_all(self) -> List[User]:
         ...
 
     @abstractmethod
