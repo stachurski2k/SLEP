@@ -1,14 +1,15 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
+from typing import List
 
-from .domain.entities import Preferences, User, UserProfile
-from .domain.exceptions import (
+from ..domain.entities import Preferences, User, UserProfile
+from ..domain.exceptions import (
     InvalidEmailError,
     UserAlreadyExistsError,
     UserNotFoundError,
 )
-from .domain.repositories import UserRepository
-from .domain.value_objects import Email, Theme, UserRole
+from ..domain.repositories import UserRepository
+from ..domain.value_objects import Email, Theme, UserRole
 from .commands import (
     CreateUserCommand,
     DeleteUserCommand,
@@ -62,6 +63,10 @@ class UserApplicationServiceImpl(UserApplicationService):
     async def getUser(self, user_id: UUID) -> UserDTO | None:
         user = await self._user_repository.get_by_id(user_id)
         return self._to_dto(user) if user else None
+
+    async def getAllUsers(self) -> List[UserDTO]:
+        users = await self._user_repository.get_all()
+        return [self._to_dto(u) for u in users]
 
     async def getUserByEmail(self, user_email: str) -> UserDTO | None:
         try:

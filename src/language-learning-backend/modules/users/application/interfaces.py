@@ -25,6 +25,10 @@ class UserApplicationService(ABC):
         ...
 
     @abstractmethod
+    async def getAllUsers(self) -> list[UserDTO]:
+        ...
+
+    @abstractmethod
     async def getUserByEmail(self, user_email: str) -> UserDTO | None:
         ...
 
