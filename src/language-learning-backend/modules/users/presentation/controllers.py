@@ -2,14 +2,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from .application.commands import (
+from ..application.commands import (
     CreateUserCommand,
     DeleteUserCommand,
     UpdatePreferencesCommand,
     UpdateProfileCommand,
 )
-from .application.interfaces import UserApplicationService
-from .domain.exceptions import (
+from ..application.interfaces import UserApplicationService
+from ..domain.exceptions import (
     InvalidEmailError,
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -48,6 +48,15 @@ async def create_user(
     except UserAlreadyExistsError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
+@user_router.get(
+    "",
+    response_model=list[UserResponse],
+)
+async def get_all_users(
+    service: UserApplicationService = Depends(get_user_service),
+) -> list[UserResponse]:
+    users_dto = await service.getAllUsers()
+    return [UserResponse.model_validate(u) for u in users_dto]
 
 @user_router.get(
     "/{user_id}",
@@ -64,6 +73,7 @@ async def get_user_by_id(
             detail=f"Użytkownik o ID {user_id} nie istnieje.",
         )
     return UserResponse.model_validate(user_dto)
+
 
 
 @user_router.get(
