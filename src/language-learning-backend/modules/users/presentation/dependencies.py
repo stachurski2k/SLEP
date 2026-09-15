@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.database import get_db
 
-from .application.services import UserApplicationServiceImpl
-from .application.interfaces import UserApplicationService
-from .infrastructure.postgres_user_repository import PostgresUserRepository
+from ..application.services import UserApplicationServiceImpl
+from ..application.interfaces import UserApplicationService
+from ..infrastructure.postgres_user_repository import PostgresUserRepository
 
 
 async def get_user_service(

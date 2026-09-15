@@ -1,7 +1,7 @@
 from pydantic import ConfigDict
 from datetime import datetime
 from uuid import UUID
-from .domain.value_objects import Theme
+from ..domain.value_objects import Theme
 from pydantic import Field
 from pydantic import BaseModel
 

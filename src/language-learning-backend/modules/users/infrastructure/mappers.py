@@ -1,5 +1,5 @@
-from .domain.entities import Preferences, User, UserProfile
-from .domain.value_objects import Theme, UserRole
+from ..domain.entities import Preferences, User, UserProfile
+from ..domain.value_objects import Theme, UserRole
 from .models import UserModel, UserPreferencesModel, UserProfileModel
 
 
