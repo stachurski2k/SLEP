@@ -2,10 +2,11 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from typing import List
 
-from .domain.entities import User
-from .domain.repositories import UserRepository
-from .domain.value_objects import Email
+from ..domain.entities import User
+from ..domain.repositories import UserRepository
+from ..domain.value_objects import Email
 from .mappers import UserMapper
 from .models import UserModel
 
@@ -28,6 +29,16 @@ class PostgresUserRepository(UserRepository):
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return UserMapper.to_domain(model) if model else None
+
+    async def get_all(self) -> List[User]:
+        stmt = (
+            select(UserModel)
+            .options(selectinload(UserModel.profile), selectinload(UserModel.preferences))
+        )
+        result = await self._session.execute(stmt)
+        models = result.scalars().all()
+        return [UserMapper.to_domain(u) for u in models]
+
 
     async def get_by_email(self, email: Email | str) -> User | None:
         email_str = str(email.value if isinstance(email, Email) else email).strip().lower()
