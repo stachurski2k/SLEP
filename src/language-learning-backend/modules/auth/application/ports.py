@@ -32,6 +32,11 @@ class TokenServicePort(ABC):
         """Generates a refresh token entity."""
         ...
 
+    @abstractmethod
+    def decode_token(self, token: str) -> dict[str, Any]:
+        """Decodes and validates a JWT token, returning its payload."""
+        ...
+
 
 class OAuthProviderPort(ABC):
     """Port for external OAuth2 identity providers (e.g. Google)."""
