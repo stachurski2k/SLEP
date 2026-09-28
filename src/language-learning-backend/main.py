@@ -7,7 +7,9 @@ import uvicorn
 from shared.database import engine, Base
 # Import modeli, aby zarejestrować je w Base.metadata przed wywołaniem create_all
 import modules.users.infrastructure.models  # noqa: F401
+import modules.auth.infrastructure.models  # noqa: F401
 from modules.users.presentation.controllers import user_router
+from modules.auth.presentation.controllers import auth_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("language-learning-backend")
@@ -60,6 +62,8 @@ app.add_middleware(
 
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(user_router)
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(auth_router)
 
 
 @app.get("/health", tags=["Health"])
@@ -78,6 +82,7 @@ async def root():
         "docs": "/docs",
         "health": "/health",
         "users_api": "/api/v1/users",
+        "auth_api": "/api/v1/auth",
     }
 
 
