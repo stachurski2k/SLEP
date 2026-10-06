@@ -10,9 +10,7 @@ from ..commands import (
     ValidateAnswerCommand,
 )
 from ..dtos import (
-    ExerciseDTO,
     ExercisePublicDTO,
-    MediaDTO,
     ValidationResultDTO,
 )
 from ..interfaces import ExerciseApplicationService
@@ -29,7 +27,7 @@ class ExerciseApplicationServiceImpl(ExerciseApplicationService):
         self._exercise_repo = exercise_repository
         self._lesson_repo = lesson_repository
 
-    async def createExercise(self, command: CreateExerciseCommand) -> ExerciseDTO:
+    async def createExercise(self, command: CreateExerciseCommand) -> Exercise:
         lesson = await self._lesson_repo.get_by_id(command.lessonId)
         if lesson is None:
             raise LessonNotFoundError(f"Lesson with ID '{command.lessonId}' not found.")
@@ -59,9 +57,9 @@ class ExerciseApplicationServiceImpl(ExerciseApplicationService):
             media=media_entities,
         )
         await self._exercise_repo.save(exercise)
-        return self._to_dto(exercise)
+        return exercise
 
-    async def updateExercise(self, command: UpdateExerciseCommand) -> ExerciseDTO:
+    async def updateExercise(self, command: UpdateExerciseCommand) -> Exercise:
         exercise = await self._exercise_repo.get_by_id(command.exerciseId)
         if exercise is None:
             raise ExerciseNotFoundError(f"Exercise with ID '{command.exerciseId}' not found.")
@@ -73,7 +71,7 @@ class ExerciseApplicationServiceImpl(ExerciseApplicationService):
         exercise.answer = command.answer.strip()
 
         await self._exercise_repo.save(exercise)
-        return self._to_dto(exercise)
+        return exercise
 
     async def deleteExercise(self, exercise_id: UUID) -> None:
         exercise = await self._exercise_repo.get_by_id(exercise_id)
@@ -81,9 +79,8 @@ class ExerciseApplicationServiceImpl(ExerciseApplicationService):
             raise ExerciseNotFoundError(f"Exercise with ID '{exercise_id}' not found.")
         await self._exercise_repo.delete(exercise_id)
 
-    async def getExercise(self, exercise_id: UUID) -> ExerciseDTO | None:
-        exercise = await self._exercise_repo.get_by_id(exercise_id)
-        return self._to_dto(exercise) if exercise else None
+    async def getExercise(self, exercise_id: UUID) -> Exercise | None:
+        return await self._exercise_repo.get_by_id(exercise_id)
 
     async def getExercisePublic(self, exercise_id: UUID) -> ExercisePublicDTO | None:
         exercise = await self._exercise_repo.get_by_id(exercise_id)
@@ -113,27 +110,6 @@ class ExerciseApplicationServiceImpl(ExerciseApplicationService):
         )
 
     @staticmethod
-    def _to_dto(exercise: Exercise) -> ExerciseDTO:
-        return ExerciseDTO(
-            id=exercise.id,
-            lessonId=exercise.lessonId,
-            type=exercise.type.value,
-            difficulty=exercise.difficulty.value,
-            points=exercise.points,
-            content=exercise.content,
-            answer=exercise.answer,
-            media=[
-                MediaDTO(
-                    id=m.id,
-                    exerciseId=m.exerciseId,
-                    type=m.type.value,
-                    url=m.url,
-                )
-                for m in exercise.media
-            ],
-        )
-
-    @staticmethod
     def _to_public_dto(exercise: Exercise) -> ExercisePublicDTO:
         return ExercisePublicDTO(
             id=exercise.id,
@@ -142,13 +118,5 @@ class ExerciseApplicationServiceImpl(ExerciseApplicationService):
             difficulty=exercise.difficulty.value,
             points=exercise.points,
             content=exercise.content,
-            media=[
-                MediaDTO(
-                    id=m.id,
-                    exerciseId=m.exerciseId,
-                    type=m.type.value,
-                    url=m.url,
-                )
-                for m in exercise.media
-            ],
+            media=exercise.media,
         )

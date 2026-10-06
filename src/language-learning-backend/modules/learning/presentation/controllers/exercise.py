@@ -41,8 +41,8 @@ async def create_exercise(
         ],
     )
     try:
-        exercise_dto = await service.createExercise(command)
-        return ExerciseResponse.model_validate(exercise_dto)
+        exercise = await service.createExercise(command)
+        return ExerciseResponse.model_validate(exercise)
     except LessonNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -52,8 +52,8 @@ async def get_exercises_by_lesson(
     lesson_id: UUID,
     service: ExerciseApplicationService = Depends(get_exercise_service),
 ) -> list[ExercisePublicResponse]:
-    exercises_dto = await service.getExercisesByLesson(lesson_id)
-    return [ExercisePublicResponse.model_validate(e) for e in exercises_dto]
+    exercises = await service.getExercisesByLesson(lesson_id)
+    return [ExercisePublicResponse.model_validate(e) for e in exercises]
 
 
 @exercise_router.get("/{exercise_id}", response_model=ExercisePublicResponse)
@@ -61,13 +61,13 @@ async def get_exercise_public(
     exercise_id: UUID,
     service: ExerciseApplicationService = Depends(get_exercise_service),
 ) -> ExercisePublicResponse:
-    exercise_dto = await service.getExercisePublic(exercise_id)
-    if exercise_dto is None:
+    exercise = await service.getExercisePublic(exercise_id)
+    if exercise is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Exercise with ID '{exercise_id}' not found.",
         )
-    return ExercisePublicResponse.model_validate(exercise_dto)
+    return ExercisePublicResponse.model_validate(exercise)
 
 
 @exercise_router.get("/{exercise_id}/full", response_model=ExerciseResponse)
@@ -75,13 +75,13 @@ async def get_exercise_full(
     exercise_id: UUID,
     service: ExerciseApplicationService = Depends(get_exercise_service),
 ) -> ExerciseResponse:
-    exercise_dto = await service.getExercise(exercise_id)
-    if exercise_dto is None:
+    exercise = await service.getExercise(exercise_id)
+    if exercise is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Exercise with ID '{exercise_id}' not found.",
         )
-    return ExerciseResponse.model_validate(exercise_dto)
+    return ExerciseResponse.model_validate(exercise)
 
 
 @exercise_router.put("/{exercise_id}", response_model=ExerciseResponse)
@@ -99,8 +99,8 @@ async def update_exercise(
         answer=schema.answer,
     )
     try:
-        exercise_dto = await service.updateExercise(command)
-        return ExerciseResponse.model_validate(exercise_dto)
+        exercise = await service.updateExercise(command)
+        return ExerciseResponse.model_validate(exercise)
     except ExerciseNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -127,7 +127,7 @@ async def validate_exercise_answer(
         submittedAnswer=schema.submittedAnswer,
     )
     try:
-        result_dto = await service.validateAnswer(command)
-        return ValidationResultResponse.model_validate(result_dto)
+        result = await service.validateAnswer(command)
+        return ValidationResultResponse.model_validate(result)
     except ExerciseNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

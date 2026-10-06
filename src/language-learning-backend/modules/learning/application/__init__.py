@@ -11,15 +11,7 @@ from .commands import (
     ValidateAnswerCommand,
 )
 from .dtos import (
-    CourseDetailsDTO,
-    CourseDTO,
-    ExerciseDTO,
     ExercisePublicDTO,
-    LessonDetailsDTO,
-    LessonDTO,
-    MediaDTO,
-    UnitDetailsDTO,
-    UnitDTO,
     ValidationResultDTO,
 )
 from .interfaces import (
@@ -46,15 +38,7 @@ __all__ = [
     "CreateExerciseCommand",
     "UpdateExerciseCommand",
     "ValidateAnswerCommand",
-    "CourseDTO",
-    "CourseDetailsDTO",
-    "UnitDTO",
-    "UnitDetailsDTO",
-    "LessonDTO",
-    "LessonDetailsDTO",
-    "ExerciseDTO",
     "ExercisePublicDTO",
-    "MediaDTO",
     "ValidationResultDTO",
     "CourseApplicationService",
     "UnitApplicationService",

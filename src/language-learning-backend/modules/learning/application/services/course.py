@@ -6,7 +6,6 @@ from ...domain.exceptions import CourseNotFoundError
 from ...domain.repositories import CourseRepository, LessonRepository, UnitRepository
 from ...domain.value_objects import ContentStatus, Difficulty, SignLanguage
 from ..commands import CreateCourseCommand, UpdateCourseCommand
-from ..dtos import CourseDetailsDTO, CourseDTO, LessonDTO, UnitDetailsDTO
 from ..interfaces import CourseApplicationService
 
 
@@ -23,7 +22,7 @@ class CourseApplicationServiceImpl(CourseApplicationService):
         self._unit_repo = unit_repository
         self._lesson_repo = lesson_repository
 
-    async def createCourse(self, command: CreateCourseCommand) -> CourseDTO:
+    async def createCourse(self, command: CreateCourseCommand) -> Course:
         difficulty_vo = Difficulty(command.difficulty)
         language_vo = SignLanguage(command.language)
 
@@ -37,9 +36,9 @@ class CourseApplicationServiceImpl(CourseApplicationService):
             createdAt=datetime.now(timezone.utc),
         )
         await self._course_repo.save(course)
-        return self._to_dto(course)
+        return course
 
-    async def updateCourse(self, command: UpdateCourseCommand) -> CourseDTO:
+    async def updateCourse(self, command: UpdateCourseCommand) -> Course:
         course = await self._course_repo.get_by_id(command.courseId)
         if course is None:
             raise CourseNotFoundError(f"Course with ID '{command.courseId}' not found.")
@@ -54,25 +53,25 @@ class CourseApplicationServiceImpl(CourseApplicationService):
             language=language_vo,
         )
         await self._course_repo.save(course)
-        return self._to_dto(course)
+        return course
 
-    async def publishCourse(self, course_id: UUID) -> CourseDTO:
+    async def publishCourse(self, course_id: UUID) -> Course:
         course = await self._course_repo.get_by_id(course_id)
         if course is None:
             raise CourseNotFoundError(f"Course with ID '{course_id}' not found.")
 
         course.publish()
         await self._course_repo.save(course)
-        return self._to_dto(course)
+        return course
 
-    async def archiveCourse(self, course_id: UUID) -> CourseDTO:
+    async def archiveCourse(self, course_id: UUID) -> Course:
         course = await self._course_repo.get_by_id(course_id)
         if course is None:
             raise CourseNotFoundError(f"Course with ID '{course_id}' not found.")
 
         course.archive()
         await self._course_repo.save(course)
-        return self._to_dto(course)
+        return course
 
     async def deleteCourse(self, course_id: UUID) -> None:
         course = await self._course_repo.get_by_id(course_id)
@@ -80,76 +79,40 @@ class CourseApplicationServiceImpl(CourseApplicationService):
             raise CourseNotFoundError(f"Course with ID '{course_id}' not found.")
         await self._course_repo.delete(course_id)
 
-    async def getCourse(self, course_id: UUID) -> CourseDTO | None:
-        course = await self._course_repo.get_by_id(course_id)
-        return self._to_dto(course) if course else None
+    async def getCourse(self, course_id: UUID) -> Course | None:
+        return await self._course_repo.get_by_id(course_id)
 
-    async def getCourseDetails(self, course_id: UUID) -> CourseDetailsDTO | None:
+    async def getCourseDetails(self, course_id: UUID) -> Course | None:
         course = await self._course_repo.get_by_id(course_id)
         if course is None:
             return None
 
-        units = await self._unit_repo.list_by_course(course.id)
-        units_dto: list[UnitDetailsDTO] = []
-        for unit in units:
-            lessons = await self._lesson_repo.list_by_unit(unit.id)
-            lessons_dto = [
-                LessonDTO(
-                    id=l.id,
-                    unitId=l.unitId,
-                    title=l.title,
-                    description=l.description,
-                    order=l.order,
-                    status=l.status.value,
-                )
-                for l in lessons
-            ]
-            units_dto.append(
-                UnitDetailsDTO(
-                    id=unit.id,
-                    courseId=unit.courseId,
-                    title=unit.title,
-                    order=unit.order,
-                    lessons=lessons_dto,
-                )
-            )
+        # Ensure units and lessons hierarchy is populated if not eager loaded
+        if not course.units:
+            units = await self._unit_repo.list_by_course(course.id)
+            for unit in units:
+                if not unit.lessons:
+                    unit.lessons = await self._lesson_repo.list_by_unit(unit.id)
+            course.units = units
+        else:
+            for unit in course.units:
+                if not unit.lessons:
+                    unit.lessons = await self._lesson_repo.list_by_unit(unit.id)
 
-        return CourseDetailsDTO(
-            id=course.id,
-            title=course.title,
-            description=course.description,
-            difficulty=course.difficulty.value,
-            language=course.language.value,
-            status=course.status.value,
-            createdAt=course.createdAt,
-            units=units_dto,
-        )
+        return course
 
     async def listCourses(
         self,
         language: str | None = None,
         difficulty: str | None = None,
         status: str | None = None,
-    ) -> list[CourseDTO]:
+    ) -> list[Course]:
         lang_vo = SignLanguage(language) if language else None
         diff_vo = Difficulty(difficulty) if difficulty else None
         stat_vo = ContentStatus(status) if status else None
 
-        courses = await self._course_repo.list_all(
+        return await self._course_repo.list_all(
             language=lang_vo,
             difficulty=diff_vo,
             status=stat_vo,
-        )
-        return [self._to_dto(c) for c in courses]
-
-    @staticmethod
-    def _to_dto(course: Course) -> CourseDTO:
-        return CourseDTO(
-            id=course.id,
-            title=course.title,
-            description=course.description,
-            difficulty=course.difficulty.value,
-            language=course.language.value,
-            status=course.status.value,
-            createdAt=course.createdAt,
         )

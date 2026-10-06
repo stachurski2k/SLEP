@@ -23,8 +23,8 @@ async def create_unit(
         order=schema.order,
     )
     try:
-        unit_dto = await service.createUnit(command)
-        return UnitResponse.model_validate(unit_dto)
+        unit = await service.createUnit(command)
+        return UnitResponse.model_validate(unit)
     except CourseNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except InvalidOrderError as e:
@@ -36,8 +36,8 @@ async def get_units_by_course(
     course_id: UUID,
     service: UnitApplicationService = Depends(get_unit_service),
 ) -> list[UnitResponse]:
-    units_dto = await service.getUnitsByCourse(course_id)
-    return [UnitResponse.model_validate(u) for u in units_dto]
+    units = await service.getUnitsByCourse(course_id)
+    return [UnitResponse.model_validate(u) for u in units]
 
 
 @unit_router.get("/{unit_id}", response_model=UnitResponse)
@@ -45,13 +45,13 @@ async def get_unit(
     unit_id: UUID,
     service: UnitApplicationService = Depends(get_unit_service),
 ) -> UnitResponse:
-    unit_dto = await service.getUnit(unit_id)
-    if unit_dto is None:
+    unit = await service.getUnit(unit_id)
+    if unit is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Unit with ID '{unit_id}' not found.",
         )
-    return UnitResponse.model_validate(unit_dto)
+    return UnitResponse.model_validate(unit)
 
 
 @unit_router.put("/{unit_id}", response_model=UnitResponse)
@@ -66,8 +66,8 @@ async def update_unit(
         order=schema.order,
     )
     try:
-        unit_dto = await service.updateUnit(command)
-        return UnitResponse.model_validate(unit_dto)
+        unit = await service.updateUnit(command)
+        return UnitResponse.model_validate(unit)
     except UnitNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except InvalidOrderError as e:

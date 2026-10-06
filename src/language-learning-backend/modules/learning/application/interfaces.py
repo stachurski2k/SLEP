@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from ..domain.entities import Course, Exercise, Lesson, Unit
 from .commands import (
     CreateCourseCommand,
     CreateExerciseCommand,
@@ -13,13 +14,7 @@ from .commands import (
     ValidateAnswerCommand,
 )
 from .dtos import (
-    CourseDetailsDTO,
-    CourseDTO,
-    ExerciseDTO,
     ExercisePublicDTO,
-    LessonDetailsDTO,
-    LessonDTO,
-    UnitDTO,
     ValidationResultDTO,
 )
 
@@ -28,19 +23,19 @@ class CourseApplicationService(ABC):
     """Application service interface for course lifecycle management."""
 
     @abstractmethod
-    async def createCourse(self, command: CreateCourseCommand) -> CourseDTO:
+    async def createCourse(self, command: CreateCourseCommand) -> Course:
         ...
 
     @abstractmethod
-    async def updateCourse(self, command: UpdateCourseCommand) -> CourseDTO:
+    async def updateCourse(self, command: UpdateCourseCommand) -> Course:
         ...
 
     @abstractmethod
-    async def publishCourse(self, course_id: UUID) -> CourseDTO:
+    async def publishCourse(self, course_id: UUID) -> Course:
         ...
 
     @abstractmethod
-    async def archiveCourse(self, course_id: UUID) -> CourseDTO:
+    async def archiveCourse(self, course_id: UUID) -> Course:
         ...
 
     @abstractmethod
@@ -48,11 +43,11 @@ class CourseApplicationService(ABC):
         ...
 
     @abstractmethod
-    async def getCourse(self, course_id: UUID) -> CourseDTO | None:
+    async def getCourse(self, course_id: UUID) -> Course | None:
         ...
 
     @abstractmethod
-    async def getCourseDetails(self, course_id: UUID) -> CourseDetailsDTO | None:
+    async def getCourseDetails(self, course_id: UUID) -> Course | None:
         ...
 
     @abstractmethod
@@ -61,7 +56,7 @@ class CourseApplicationService(ABC):
         language: str | None = None,
         difficulty: str | None = None,
         status: str | None = None,
-    ) -> list[CourseDTO]:
+    ) -> list[Course]:
         ...
 
 
@@ -69,11 +64,11 @@ class UnitApplicationService(ABC):
     """Application service interface for course units."""
 
     @abstractmethod
-    async def createUnit(self, command: CreateUnitCommand) -> UnitDTO:
+    async def createUnit(self, command: CreateUnitCommand) -> Unit:
         ...
 
     @abstractmethod
-    async def updateUnit(self, command: UpdateUnitCommand) -> UnitDTO:
+    async def updateUnit(self, command: UpdateUnitCommand) -> Unit:
         ...
 
     @abstractmethod
@@ -81,11 +76,11 @@ class UnitApplicationService(ABC):
         ...
 
     @abstractmethod
-    async def getUnit(self, unit_id: UUID) -> UnitDTO | None:
+    async def getUnit(self, unit_id: UUID) -> Unit | None:
         ...
 
     @abstractmethod
-    async def getUnitsByCourse(self, course_id: UUID) -> list[UnitDTO]:
+    async def getUnitsByCourse(self, course_id: UUID) -> list[Unit]:
         ...
 
 
@@ -93,15 +88,15 @@ class LessonApplicationService(ABC):
     """Application service interface for unit lessons."""
 
     @abstractmethod
-    async def createLesson(self, command: CreateLessonCommand) -> LessonDTO:
+    async def createLesson(self, command: CreateLessonCommand) -> Lesson:
         ...
 
     @abstractmethod
-    async def updateLesson(self, command: UpdateLessonCommand) -> LessonDTO:
+    async def updateLesson(self, command: UpdateLessonCommand) -> Lesson:
         ...
 
     @abstractmethod
-    async def publishLesson(self, lesson_id: UUID) -> LessonDTO:
+    async def publishLesson(self, lesson_id: UUID) -> Lesson:
         ...
 
     @abstractmethod
@@ -109,15 +104,15 @@ class LessonApplicationService(ABC):
         ...
 
     @abstractmethod
-    async def getLesson(self, lesson_id: UUID) -> LessonDTO | None:
+    async def getLesson(self, lesson_id: UUID) -> Lesson | None:
         ...
 
     @abstractmethod
-    async def getLessonDetails(self, lesson_id: UUID) -> LessonDetailsDTO | None:
+    async def getLessonDetails(self, lesson_id: UUID) -> Lesson | None:
         ...
 
     @abstractmethod
-    async def getLessonsByUnit(self, unit_id: UUID) -> list[LessonDTO]:
+    async def getLessonsByUnit(self, unit_id: UUID) -> list[Lesson]:
         ...
 
 
@@ -125,11 +120,11 @@ class ExerciseApplicationService(ABC):
     """Application service interface for interactive exercises and validation."""
 
     @abstractmethod
-    async def createExercise(self, command: CreateExerciseCommand) -> ExerciseDTO:
+    async def createExercise(self, command: CreateExerciseCommand) -> Exercise:
         ...
 
     @abstractmethod
-    async def updateExercise(self, command: UpdateExerciseCommand) -> ExerciseDTO:
+    async def updateExercise(self, command: UpdateExerciseCommand) -> Exercise:
         ...
 
     @abstractmethod
@@ -137,7 +132,7 @@ class ExerciseApplicationService(ABC):
         ...
 
     @abstractmethod
-    async def getExercise(self, exercise_id: UUID) -> ExerciseDTO | None:
+    async def getExercise(self, exercise_id: UUID) -> Exercise | None:
         ...
 
     @abstractmethod

@@ -23,12 +23,12 @@ async def list_courses(
     status_filter: str | None = Query(None, alias="status", description="Filter by status"),
     service: CourseApplicationService = Depends(get_course_service),
 ) -> list[CourseResponse]:
-    courses_dto = await service.listCourses(
+    courses = await service.listCourses(
         language=language,
         difficulty=difficulty,
         status=status_filter,
     )
-    return [CourseResponse.model_validate(c) for c in courses_dto]
+    return [CourseResponse.model_validate(c) for c in courses]
 
 
 @course_router.post("", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
@@ -42,8 +42,8 @@ async def create_course(
         difficulty=schema.difficulty.value,
         language=schema.language.value,
     )
-    course_dto = await service.createCourse(command)
-    return CourseResponse.model_validate(course_dto)
+    course = await service.createCourse(command)
+    return CourseResponse.model_validate(course)
 
 
 @course_router.get("/{course_id}", response_model=CourseDetailsResponse)
@@ -51,13 +51,13 @@ async def get_course_details(
     course_id: UUID,
     service: CourseApplicationService = Depends(get_course_service),
 ) -> CourseDetailsResponse:
-    details_dto = await service.getCourseDetails(course_id)
-    if details_dto is None:
+    details = await service.getCourseDetails(course_id)
+    if details is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Course with ID '{course_id}' not found.",
         )
-    return CourseDetailsResponse.model_validate(details_dto)
+    return CourseDetailsResponse.model_validate(details)
 
 
 @course_router.put("/{course_id}", response_model=CourseResponse)
@@ -74,8 +74,8 @@ async def update_course(
         language=schema.language.value,
     )
     try:
-        course_dto = await service.updateCourse(command)
-        return CourseResponse.model_validate(course_dto)
+        course = await service.updateCourse(command)
+        return CourseResponse.model_validate(course)
     except CourseNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -86,8 +86,8 @@ async def publish_course(
     service: CourseApplicationService = Depends(get_course_service),
 ) -> CourseResponse:
     try:
-        course_dto = await service.publishCourse(course_id)
-        return CourseResponse.model_validate(course_dto)
+        course = await service.publishCourse(course_id)
+        return CourseResponse.model_validate(course)
     except CourseNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except InvalidContentStateError as e:
@@ -100,8 +100,8 @@ async def archive_course(
     service: CourseApplicationService = Depends(get_course_service),
 ) -> CourseResponse:
     try:
-        course_dto = await service.archiveCourse(course_id)
-        return CourseResponse.model_validate(course_dto)
+        course = await service.archiveCourse(course_id)
+        return CourseResponse.model_validate(course)
     except CourseNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

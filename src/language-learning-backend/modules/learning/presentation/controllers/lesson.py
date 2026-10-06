@@ -29,8 +29,8 @@ async def create_lesson(
         order=schema.order,
     )
     try:
-        lesson_dto = await service.createLesson(command)
-        return LessonResponse.model_validate(lesson_dto)
+        lesson = await service.createLesson(command)
+        return LessonResponse.model_validate(lesson)
     except UnitNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except InvalidOrderError as e:
@@ -42,8 +42,8 @@ async def get_lessons_by_unit(
     unit_id: UUID,
     service: LessonApplicationService = Depends(get_lesson_service),
 ) -> list[LessonResponse]:
-    lessons_dto = await service.getLessonsByUnit(unit_id)
-    return [LessonResponse.model_validate(l) for l in lessons_dto]
+    lessons = await service.getLessonsByUnit(unit_id)
+    return [LessonResponse.model_validate(l) for l in lessons]
 
 
 @lesson_router.get("/{lesson_id}", response_model=LessonDetailsResponse)
@@ -51,13 +51,13 @@ async def get_lesson_details(
     lesson_id: UUID,
     service: LessonApplicationService = Depends(get_lesson_service),
 ) -> LessonDetailsResponse:
-    details_dto = await service.getLessonDetails(lesson_id)
-    if details_dto is None:
+    details = await service.getLessonDetails(lesson_id)
+    if details is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Lesson with ID '{lesson_id}' not found.",
         )
-    return LessonDetailsResponse.model_validate(details_dto)
+    return LessonDetailsResponse.model_validate(details)
 
 
 @lesson_router.put("/{lesson_id}", response_model=LessonResponse)
@@ -73,8 +73,8 @@ async def update_lesson(
         order=schema.order,
     )
     try:
-        lesson_dto = await service.updateLesson(command)
-        return LessonResponse.model_validate(lesson_dto)
+        lesson = await service.updateLesson(command)
+        return LessonResponse.model_validate(lesson)
     except LessonNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except InvalidOrderError as e:
@@ -87,8 +87,8 @@ async def publish_lesson(
     service: LessonApplicationService = Depends(get_lesson_service),
 ) -> LessonResponse:
     try:
-        lesson_dto = await service.publishLesson(lesson_id)
-        return LessonResponse.model_validate(lesson_dto)
+        lesson = await service.publishLesson(lesson_id)
+        return LessonResponse.model_validate(lesson)
     except LessonNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
