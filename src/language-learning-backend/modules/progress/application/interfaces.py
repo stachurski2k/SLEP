@@ -1,20 +1,16 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from ..domain.entities import LessonProgress, UserProgress
 from .commands import CompleteLessonCommand, ResetLessonCommand, StartLessonCommand
-from .dtos import (
-    LessonCompletionResultDTO,
-    LessonProgressDTO,
-    ProgressSummaryDTO,
-    UserProgressDTO,
-)
+from .dtos import LessonCompletionResultDTO, ProgressSummaryDTO
 
 
 class ProgressApplicationService(ABC):
     """Application service interface for progress management."""
 
     @abstractmethod
-    async def getUserProgress(self, user_id: UUID) -> UserProgressDTO:
+    async def getUserProgress(self, user_id: UUID) -> UserProgress:
         """Retrieves or initializes the global user progress record."""
         ...
 
@@ -26,12 +22,12 @@ class ProgressApplicationService(ABC):
     @abstractmethod
     async def getLessonProgress(
         self, user_id: UUID, lesson_id: UUID
-    ) -> LessonProgressDTO:
+    ) -> LessonProgress:
         """Retrieves user progress for a specific lesson."""
         ...
 
     @abstractmethod
-    async def startLesson(self, command: StartLessonCommand) -> LessonProgressDTO:
+    async def startLesson(self, command: StartLessonCommand) -> LessonProgress:
         """Registers a start/attempt for a lesson."""
         ...
 
@@ -43,6 +39,6 @@ class ProgressApplicationService(ABC):
         ...
 
     @abstractmethod
-    async def resetLesson(self, command: ResetLessonCommand) -> LessonProgressDTO:
+    async def resetLesson(self, command: ResetLessonCommand) -> LessonProgress:
         """Resets the progress for a specific lesson."""
         ...

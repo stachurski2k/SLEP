@@ -1,15 +1,13 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
+from modules.statistics.domain.entities import DailyActivity
+from modules.statistics.domain.repositories import DailyActivityRepository
+
 from ...domain.entities import LessonProgress, UserProgress
 from ...domain.repositories import LessonProgressRepository, UserProgressRepository
 from ..commands import CompleteLessonCommand, ResetLessonCommand, StartLessonCommand
-from ..dtos import (
-    LessonCompletionResultDTO,
-    LessonProgressDTO,
-    ProgressSummaryDTO,
-    UserProgressDTO,
-)
+from ..dtos import LessonCompletionResultDTO, ProgressSummaryDTO
 from ..interfaces import ProgressApplicationService
 
 
@@ -20,9 +18,11 @@ class ProgressApplicationServiceImpl(ProgressApplicationService):
         self,
         user_progress_repository: UserProgressRepository,
         lesson_progress_repository: LessonProgressRepository,
+        daily_activity_repository: DailyActivityRepository | None = None,
     ) -> None:
         self._user_progress_repo = user_progress_repository
         self._lesson_progress_repo = lesson_progress_repository
+        self._daily_activity_repo = daily_activity_repository
 
     async def _get_or_create_user_progress(self, user_id: UUID) -> UserProgress:
         user_progress = await self._user_progress_repo.get_by_user_id(user_id)
@@ -38,9 +38,8 @@ class ProgressApplicationServiceImpl(ProgressApplicationService):
             await self._user_progress_repo.save(user_progress)
         return user_progress
 
-    async def getUserProgress(self, user_id: UUID) -> UserProgressDTO:
-        user_progress = await self._get_or_create_user_progress(user_id)
-        return self._to_user_dto(user_progress)
+    async def getUserProgress(self, user_id: UUID) -> UserProgress:
+        return await self._get_or_create_user_progress(user_id)
 
     async def getProgressSummary(self, user_id: UUID) -> ProgressSummaryDTO:
         user_progress = await self._get_or_create_user_progress(user_id)
@@ -57,10 +56,10 @@ class ProgressApplicationServiceImpl(ProgressApplicationService):
 
     async def getLessonProgress(
         self, user_id: UUID, lesson_id: UUID
-    ) -> LessonProgressDTO:
+    ) -> LessonProgress:
         lp = await self._lesson_progress_repo.get_by_user_and_lesson(user_id, lesson_id)
         if lp is None:
-            return LessonProgressDTO(
+            return LessonProgress(
                 id=uuid4(),
                 userId=user_id,
                 lessonId=lesson_id,
@@ -69,9 +68,9 @@ class ProgressApplicationServiceImpl(ProgressApplicationService):
                 completedAt=None,
                 lastAttemptAt=None,
             )
-        return self._to_lesson_dto(lp)
+        return lp
 
-    async def startLesson(self, command: StartLessonCommand) -> LessonProgressDTO:
+    async def startLesson(self, command: StartLessonCommand) -> LessonProgress:
         lp = await self._lesson_progress_repo.get_by_user_and_lesson(
             command.userId, command.lessonId
         )
@@ -86,7 +85,7 @@ class ProgressApplicationServiceImpl(ProgressApplicationService):
 
         lp.start_attempt()
         await self._lesson_progress_repo.save(lp)
-        return self._to_lesson_dto(lp)
+        return lp
 
     async def completeLesson(
         self, command: CompleteLessonCommand
@@ -111,6 +110,23 @@ class ProgressApplicationServiceImpl(ProgressApplicationService):
             user_progress.add_xp(earned_xp)
             await self._user_progress_repo.save(user_progress)
 
+            if self._daily_activity_repo:
+                today = datetime.now(timezone.utc).date()
+                act = await self._daily_activity_repo.get_by_user_and_date(
+                    command.userId, today
+                )
+                if act is None:
+                    act = DailyActivity(
+                        id=uuid4(),
+                        userId=command.userId,
+                        date=today,
+                        xpEarned=earned_xp,
+                        lessonsCompleted=1,
+                    )
+                else:
+                    act.record_progress(xp=earned_xp, lessons_completed=1)
+                await self._daily_activity_repo.save(act)
+
         return LessonCompletionResultDTO(
             lessonId=command.lessonId,
             isFirstCompletion=is_first_completion,
@@ -119,7 +135,7 @@ class ProgressApplicationServiceImpl(ProgressApplicationService):
             completedAt=lp.completedAt or datetime.now(timezone.utc),
         )
 
-    async def resetLesson(self, command: ResetLessonCommand) -> LessonProgressDTO:
+    async def resetLesson(self, command: ResetLessonCommand) -> LessonProgress:
         lp = await self._lesson_progress_repo.get_by_user_and_lesson(
             command.userId, command.lessonId
         )
@@ -135,26 +151,4 @@ class ProgressApplicationServiceImpl(ProgressApplicationService):
             lp.reset()
 
         await self._lesson_progress_repo.save(lp)
-        return self._to_lesson_dto(lp)
-
-    @staticmethod
-    def _to_user_dto(entity: UserProgress) -> UserProgressDTO:
-        return UserProgressDTO(
-            id=entity.id,
-            userId=entity.userId,
-            xp=entity.xp,
-            createdAt=entity.createdAt,
-            updatedAt=entity.updatedAt,
-        )
-
-    @staticmethod
-    def _to_lesson_dto(entity: LessonProgress) -> LessonProgressDTO:
-        return LessonProgressDTO(
-            id=entity.id,
-            userId=entity.userId,
-            lessonId=entity.lessonId,
-            completed=entity.completed,
-            attempts=entity.attempts,
-            completedAt=entity.completedAt,
-            lastAttemptAt=entity.lastAttemptAt,
-        )
+        return lp
