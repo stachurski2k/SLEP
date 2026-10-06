@@ -10,10 +10,12 @@ import modules.users.infrastructure.models  # noqa: F401
 import modules.auth.infrastructure.models  # noqa: F401
 import modules.learning.infrastructure.models  # noqa: F401
 import modules.progress.infrastructure.models  # noqa: F401
+import modules.statistics.infrastructure.models  # noqa: F401
 from modules.users.presentation.controllers import user_router
 from modules.auth.presentation.controllers import auth_router
 from modules.learning.presentation.controllers import learning_router
 from modules.progress.presentation.controllers import progress_router
+from modules.statistics.presentation.controllers import statistics_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("language-learning-backend")
@@ -72,6 +74,8 @@ app.include_router(learning_router, prefix="/api/v1")
 app.include_router(learning_router)
 app.include_router(progress_router, prefix="/api/v1")
 app.include_router(progress_router)
+app.include_router(statistics_router, prefix="/api/v1")
+app.include_router(statistics_router)
 
 
 @app.get("/health", tags=["Health"])
@@ -93,6 +97,7 @@ async def root():
         "auth_api": "/api/v1/auth",
         "learning_api": "/api/v1/courses",
         "progress_api": "/api/v1/progress",
+        "statistics_api": "/api/v1/statistics",
     }
 
 
