@@ -4,7 +4,10 @@ Ported from research/test_version/DataProcessing/collector.py and
 preprocessing.py, trimmed to the single-video, inference-only path (no
 dataset scanning, no augmentation).
 """
+from functools import lru_cache
 from pathlib import Path
+from shutil import copy2
+from tempfile import gettempdir
 
 import cv2
 import mediapipe as mp
@@ -27,9 +30,29 @@ RIGHT_WRIST_POSE_INDEX = 16
 FEATURE_SIZE = 144
 
 
+@lru_cache
+def get_mediapipe_model_path(model_path: str) -> str:
+    """Return a native-safe path for a MediaPipe task model.
+
+    MediaPipe's Windows extension can fail to open model assets from a path
+    containing non-ASCII characters, even though Python can access that file.
+    Keep a cached copy in the system temp directory before passing the path to
+    MediaPipe's native code.
+    """
+    source = Path(model_path)
+    cache_dir = Path(gettempdir()) / "slep-mediapipe-models"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cached_model = cache_dir / source.name
+
+    if not cached_model.exists() or cached_model.stat().st_size != source.stat().st_size:
+        copy2(source, cached_model)
+
+    return str(cached_model)
+
+
 def create_landmarkers(hand_model_path: Path, pose_model_path: Path):
     hands_options = HandLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=str(hand_model_path)),
+        base_options=BaseOptions(model_asset_path=get_mediapipe_model_path(str(hand_model_path))),
         running_mode=RunningMode.VIDEO,
         num_hands=2,
         min_hand_detection_confidence=0.25,
@@ -38,7 +61,7 @@ def create_landmarkers(hand_model_path: Path, pose_model_path: Path):
     )
 
     pose_options = PoseLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=str(pose_model_path)),
+        base_options=BaseOptions(model_asset_path=get_mediapipe_model_path(str(pose_model_path))),
         running_mode=RunningMode.VIDEO,
         num_poses=1,
         min_pose_detection_confidence=0.5,
