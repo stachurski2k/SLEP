@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Navigate, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { predictGesture } from '../actions'
-import { lessonSigns } from '../lesson'
+import { lessons, type Lesson } from '../lesson'
 import { routes } from '../routes'
 import { primaryButtonClass } from '../ui/classes'
 
@@ -16,7 +16,17 @@ function stopStream(stream: MediaStream | null) {
 }
 
 export default function LessonPage() {
+  const { lessonId } = useParams<{ lessonId: string }>()
+  const lesson = lessons.find((entry) => entry.id === lessonId)
+
+  if (!lesson) return <Navigate replace to={routes.lessons} />
+
+  return <LessonSession key={lesson.id} lesson={lesson} />
+}
+
+function LessonSession({ lesson }: { lesson: Lesson }) {
   const navigate = useNavigate()
+  const lessonSigns = lesson.signs
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -141,7 +151,7 @@ export default function LessonPage() {
       <section className="mx-auto grid min-h-full max-w-xl place-items-center py-10 text-center">
         <div>
           <div className="mx-auto grid size-20 place-items-center rounded-full bg-emerald-300/15 text-4xl">✓</div>
-          <p className="mt-6 text-xs font-semibold tracking-[0.16em] text-[#64d7bd] uppercase">Lesson complete</p>
+          <p className="mt-6 text-xs font-semibold tracking-[0.16em] text-[#64d7bd] uppercase">Lesson {lesson.id} complete · {lesson.title}</p>
           <h2 className="mt-3 mb-0 text-3xl font-semibold text-white">Nice work!</h2>
           <p className="mt-3 text-[#a8b0c3]">You completed all {lessonSigns.length} signs: {lessonSigns.join(', ')}.</p>
           <button type="button" className={`${primaryButtonClass} mt-8`} onClick={() => navigate(routes.lessons)}>Back to lessons</button>
@@ -164,6 +174,7 @@ export default function LessonPage() {
         <span className="text-xs font-medium text-[#738099]">{signIndex + 1} / {lessonSigns.length}</span>
       </div>
       <div className="mt-8 text-center sm:mt-10">
+        <p className="mt-0 mb-3 text-sm font-medium text-[#64d7bd]">Lesson {lesson.id} · {lesson.title}</p>
         <p className="m-0 text-lg font-medium text-[#a8b0c3]">Show the sign:</p>
         <h2 className="mt-2 mb-0 text-5xl font-bold tracking-tight text-white sm:text-6xl">{expectedLabel}</h2>
         <div className="relative mt-6 aspect-video w-full overflow-hidden rounded-[28px] border border-slate-400/30 bg-[radial-gradient(circle_at_center,rgba(74,119,255,0.16),transparent_45%),#0a1018] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:mt-8">
