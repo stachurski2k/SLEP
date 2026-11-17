@@ -1,3 +1,5 @@
+from sqlalchemy import inspect
+
 from ..domain.entities import Exercise, Lesson, Media, Unit
 from ..domain.value_objects import (
     ContentStatus,
@@ -12,8 +14,20 @@ class LearningMapper:
     """Mapper between domain entities and persistence models."""
 
     @staticmethod
+    def _is_loaded(model: object, attr: str) -> bool:
+        try:
+            state = inspect(model)
+            return attr in state.dict
+        except Exception:
+            return hasattr(model, attr) and getattr(model, attr) is not None
+
+    @staticmethod
     def unit_to_domain(model: UnitModel) -> Unit:
-        lessons = [LearningMapper.lesson_to_domain(l) for l in model.lessons] if model.lessons else []
+        lessons = (
+            [LearningMapper.lesson_to_domain(l) for l in model.lessons]
+            if LearningMapper._is_loaded(model, "lessons") and model.lessons
+            else []
+        )
         return Unit(
             id=model.id,
             title=model.title,
@@ -39,7 +53,7 @@ class LearningMapper:
     def lesson_to_domain(model: LessonModel) -> Lesson:
         exercises = (
             [LearningMapper.exercise_to_domain(e) for e in model.exercises]
-            if model.exercises
+            if LearningMapper._is_loaded(model, "exercises") and model.exercises
             else []
         )
         return Lesson(
@@ -75,7 +89,7 @@ class LearningMapper:
     def exercise_to_domain(model: ExerciseModel) -> Exercise:
         media_list = (
             [LearningMapper.media_to_domain(m) for m in model.media]
-            if model.media
+            if LearningMapper._is_loaded(model, "media") and model.media
             else []
         )
         return Exercise(

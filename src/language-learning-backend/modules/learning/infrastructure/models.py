@@ -24,6 +24,7 @@ class UnitModel(Base):
         back_populates="unit",
         cascade="all, delete-orphan",
         order_by="LessonModel.order_no",
+        lazy="selectin",
     )
 
 
@@ -50,6 +51,7 @@ class LessonModel(Base):
         "ExerciseModel",
         back_populates="lesson",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
 
@@ -77,6 +79,7 @@ class ExerciseModel(Base):
         "MediaModel",
         back_populates="exercise",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
 
