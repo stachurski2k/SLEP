@@ -1,5 +1,5 @@
 from ..domain.entities import ExternalIdentity, RefreshToken, UserCredentials
-from ..domain.value_objects import AuthProvider
+from ..domain.value_objects import AuthProvider, UserRole
 from .models import ExternalIdentityModel, RefreshTokenModel, UserCredentialsModel
 
 
@@ -13,26 +13,39 @@ class AuthMapper:
 
     @staticmethod
     def to_credentials_domain(model: UserCredentialsModel) -> UserCredentials:
+        role_vo = (
+            UserRole(model.role)
+            if getattr(model, "role", None) in UserRole._value2member_map_
+            else UserRole.USER
+        )
         return UserCredentials(
             id=model.id,
             email=model.email,
             passwordHash=model.password_hash,
             createdAt=model.created_at,
+            role=role_vo,
         )
 
     @staticmethod
     def to_credentials_persistence(
         entity: UserCredentials, existing: UserCredentialsModel | None = None
     ) -> UserCredentialsModel:
+        role_str = (
+            entity.role.value
+            if hasattr(entity.role, "value")
+            else str(entity.role or "user")
+        )
         if existing is None:
             return UserCredentialsModel(
                 id=entity.id,
                 email=entity.email,
                 password_hash=entity.passwordHash,
+                role=role_str,
                 created_at=entity.createdAt,
             )
         existing.email = entity.email
         existing.password_hash = entity.passwordHash
+        existing.role = role_str
         return existing
 
     # --- RefreshToken ---

@@ -9,6 +9,7 @@ from shared.database import get_db
 from ..application.interfaces import AuthApplicationService
 from ..application.services import AuthApplicationServiceImpl
 from ..domain.exceptions import InvalidTokenError, TokenExpiredError
+from ..domain.value_objects import UserRole
 from ..infrastructure.repositories import (
     PostgresExternalIdentityRepository,
     PostgresRefreshTokenRepository,
@@ -94,3 +95,41 @@ async def get_current_user_id(
             detail=f"Invalid authentication token: {e}",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def get_current_user_role(
+    auth_header: HTTPAuthorizationCredentials = Depends(_http_bearer),
+    token_service: JwtTokenService = Depends(get_token_service),
+) -> UserRole:
+    """
+    Dependency extracting and validating user role from JWT Bearer access token.
+    """
+    token = auth_header.credentials
+    try:
+        payload = token_service.decode_token(token)
+        role_str = payload.get("role", UserRole.USER.value)
+        return (
+            UserRole(role_str)
+            if role_str in UserRole._value2member_map_
+            else UserRole.USER
+        )
+    except (TokenExpiredError, InvalidTokenError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+async def require_admin(
+    role: UserRole = Depends(get_current_user_role),
+) -> UserRole:
+    """
+    Dependency enforcing administrator role access.
+    """
+    if role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Wymagane uprawnienia administratora.",
+        )
+    return role

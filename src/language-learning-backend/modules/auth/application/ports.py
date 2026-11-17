@@ -23,7 +23,9 @@ class TokenServicePort(ABC):
     """Port for generating and verifying authentication tokens (JWT)."""
 
     @abstractmethod
-    def create_access_token(self, user_id: UUID, email: str) -> str:
+    def create_access_token(
+        self, user_id: UUID, email: str, role: str = "user"
+    ) -> str:
         """Generates an access token."""
         ...
 

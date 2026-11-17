@@ -15,7 +15,7 @@ from ..domain.repositories import (
     RefreshTokenRepository,
     UserCredentialsRepository,
 )
-from ..domain.value_objects import AuthProvider, Email, RawPassword
+from ..domain.value_objects import AuthProvider, Email, RawPassword, UserRole
 from .commands import (
     ChangePasswordCommand,
     LoginCommand,
@@ -75,13 +75,22 @@ class AuthApplicationServiceImpl(AuthApplicationService):
             email=email_vo.value,
             passwordHash=password_hash,
             createdAt=datetime.now(timezone.utc),
+            role=UserRole.USER,
         )
         await self._credentials_repo.save(credentials)
 
-        tokens = await self._generate_token_pair(credentials.id, credentials.email)
+        role_val = (
+            credentials.role.value
+            if hasattr(credentials.role, "value")
+            else str(credentials.role)
+        )
+        tokens = await self._generate_token_pair(
+            credentials.id, credentials.email, role_val
+        )
         return AuthResponseDTO(
             userId=credentials.id,
             email=credentials.email,
+            role=role_val,
             tokens=tokens,
         )
 
@@ -98,10 +107,18 @@ class AuthApplicationServiceImpl(AuthApplicationService):
         if not self._hasher.verify(command.password, credentials.passwordHash):
             raise InvalidCredentialsError("Invalid email or password.")
 
-        tokens = await self._generate_token_pair(credentials.id, credentials.email)
+        role_val = (
+            credentials.role.value
+            if hasattr(credentials.role, "value")
+            else str(credentials.role)
+        )
+        tokens = await self._generate_token_pair(
+            credentials.id, credentials.email, role_val
+        )
         return AuthResponseDTO(
             userId=credentials.id,
             email=credentials.email,
+            role=role_val,
             tokens=tokens,
         )
 
@@ -141,6 +158,7 @@ class AuthApplicationServiceImpl(AuthApplicationService):
                     email=email_vo.value,
                     passwordHash=None,
                     createdAt=datetime.now(timezone.utc),
+                    role=UserRole.USER,
                 )
                 await self._credentials_repo.save(credentials)
 
@@ -153,10 +171,18 @@ class AuthApplicationServiceImpl(AuthApplicationService):
             )
             await self._external_identity_repo.save(new_identity)
 
-        tokens = await self._generate_token_pair(credentials.id, credentials.email)
+        role_val = (
+            credentials.role.value
+            if hasattr(credentials.role, "value")
+            else str(credentials.role)
+        )
+        tokens = await self._generate_token_pair(
+            credentials.id, credentials.email, role_val
+        )
         return AuthResponseDTO(
             userId=credentials.id,
             email=credentials.email,
+            role=role_val,
             tokens=tokens,
         )
 
@@ -178,7 +204,14 @@ class AuthApplicationServiceImpl(AuthApplicationService):
         token_entity.revoke()
         await self._refresh_token_repo.save(token_entity)
 
-        return await self._generate_token_pair(credentials.id, credentials.email)
+        role_val = (
+            credentials.role.value
+            if hasattr(credentials.role, "value")
+            else str(credentials.role)
+        )
+        return await self._generate_token_pair(
+            credentials.id, credentials.email, role_val
+        )
 
     async def logout(self, command: LogoutCommand) -> None:
         """
@@ -212,9 +245,11 @@ class AuthApplicationServiceImpl(AuthApplicationService):
         # Invalidate all active refresh tokens on password change for security
         await self._refresh_token_repo.revoke_all_for_user(command.userId)
 
-    async def _generate_token_pair(self, user_id: UUID, email: str) -> TokenDTO:
+    async def _generate_token_pair(
+        self, user_id: UUID, email: str, role: str = "user"
+    ) -> TokenDTO:
         """Helper method to issue and persist a new access and refresh token pair."""
-        access_token = self._token_service.create_access_token(user_id, email)
+        access_token = self._token_service.create_access_token(user_id, email, role)
         refresh_token_entity = self._token_service.create_refresh_token(user_id)
         await self._refresh_token_repo.save(refresh_token_entity)
 

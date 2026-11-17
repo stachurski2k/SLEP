@@ -11,6 +11,12 @@ class AuthProvider(str, Enum):
     GOOGLE = "google"
 
 
+class UserRole(str, Enum):
+    """System authorization role for a user."""
+    USER = "user"
+    ADMIN = "admin"
+
+
 @dataclass(frozen=True)
 class Email:
     """
@@ -42,7 +48,7 @@ class RawPassword:
     """
     value: str
 
-    MIN_LENGTH = 8
+    MIN_LENGTH = 5
 
     def __post_init__(self) -> None:
         if not isinstance(self.value, str):

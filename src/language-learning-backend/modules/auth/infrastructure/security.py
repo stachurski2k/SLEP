@@ -82,13 +82,16 @@ class JwtTokenService(TokenServicePort):
         self._access_token_expire_minutes = access_token_expire_minutes
         self._refresh_token_expire_days = refresh_token_expire_days
 
-    def create_access_token(self, user_id: UUID, email: str) -> str:
+    def create_access_token(
+        self, user_id: UUID, email: str, role: str = "user"
+    ) -> str:
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self._access_token_expire_minutes)
 
         payload = {
             "sub": str(user_id),
             "email": email,
+            "role": role,
             "type": "access",
             "iat": int(now.timestamp()),
             "exp": int(expires_at.timestamp()),

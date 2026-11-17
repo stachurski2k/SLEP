@@ -117,12 +117,15 @@ def test_jwt_token_service():
     user_id = uuid4()
     email = "test@example.com"
 
-    access_token = service.create_access_token(user_id=user_id, email=email)
+    access_token = service.create_access_token(
+        user_id=user_id, email=email, role="admin"
+    )
     assert isinstance(access_token, str)
 
     payload = service.decode_token(access_token)
     assert payload["sub"] == str(user_id)
     assert payload["email"] == email
+    assert payload["role"] == "admin"
     assert payload["type"] == "access"
 
     refresh_entity = service.create_refresh_token(user_id=user_id)
@@ -167,6 +170,7 @@ async def test_auth_service_register_and_login_flow():
     )
     auth_resp = await service.register(reg_cmd)
     assert auth_resp.email == "learner@slep.pl"
+    assert auth_resp.role == "user"
     assert auth_resp.tokens.accessToken is not None
     assert auth_resp.tokens.refreshToken is not None
 
@@ -289,6 +293,7 @@ def test_api_auth_endpoints():
         assert res.status_code == 201
         data = res.json()
         assert data["email"] == "api_user@slep.pl"
+        assert data["role"] == "user"
         assert "accessToken" in data["tokens"]
         access_token = data["tokens"]["accessToken"]
         refresh_token = data["tokens"]["refreshToken"]

@@ -11,7 +11,7 @@ from shared.database import Base
 
 class UserCredentialsModel(Base):
     """
-    Persistence model for user credentials (email, hashed password).
+    Persistence model for user credentials (email, hashed password, role).
     """
     __tablename__ = "user_credentials"
 
@@ -23,6 +23,9 @@ class UserCredentialsModel(Base):
     )
     password_hash: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
+    )
+    role: Mapped[str] = mapped_column(
+        String(50), default="user", server_default="user", nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

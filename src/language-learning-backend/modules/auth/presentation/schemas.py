@@ -7,8 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class RegisterRequest(BaseModel):
     """Payload for user registration."""
     email: str = Field(..., description="User email address", examples=["user@example.com"])
-    password: str = Field(..., min_length=8, description="Password (at least 8 characters)", examples=["SecurePass123!"])
-    passwordConfirmation: str = Field(..., min_length=8, description="Confirmation of password", examples=["SecurePass123!"])
+    password: str = Field(..., min_length=5, description="Password (at least 5 characters)", examples=["SecurePass123!"])
+    passwordConfirmation: str = Field(..., min_length=5, description="Confirmation of password", examples=["SecurePass123!"])
 
 
 class LoginRequest(BaseModel):
@@ -35,8 +35,8 @@ class LogoutRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     """Payload for changing the authenticated user's password."""
     currentPassword: str = Field(..., description="Current password")
-    newPassword: str = Field(..., min_length=8, description="New password (at least 8 characters)")
-    newPasswordConfirmation: str = Field(..., min_length=8, description="Confirmation of new password")
+    newPassword: str = Field(..., min_length=5, description="New password (at least 5 characters)")
+    newPasswordConfirmation: str = Field(..., min_length=5, description="Confirmation of new password")
 
 
 # --- RESPONSE SCHEMAS ---
@@ -57,6 +57,7 @@ class AuthResponse(BaseModel):
 
     userId: UUID
     email: str
+    role: str = "user"
     tokens: TokenResponse
 
 

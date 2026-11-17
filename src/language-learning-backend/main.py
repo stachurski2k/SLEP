@@ -4,13 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from shared.database import engine, Base
+from shared.database import AsyncSessionLocal, engine, Base
 # Import modeli, aby zarejestrować je w Base.metadata przed wywołaniem create_all
 import modules.users.infrastructure.models  # noqa: F401
 import modules.auth.infrastructure.models  # noqa: F401
 import modules.learning.infrastructure.models  # noqa: F401
 import modules.progress.infrastructure.models  # noqa: F401
 import modules.statistics.infrastructure.models  # noqa: F401
+from modules.auth.infrastructure.seed import ensure_auth_schema_and_default_admin
 from modules.users.presentation.controllers import user_router
 from modules.auth.presentation.controllers import auth_router
 from modules.learning.presentation.controllers import learning_router
@@ -28,6 +29,8 @@ async def lifespan(app: FastAPI):
         logger.info("Database Initialization and table creation...")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        async with AsyncSessionLocal() as session:
+            await ensure_auth_schema_and_default_admin(engine, session)
         logger.info("Tables in database initialize sucessfully")
     except Exception as e:
         logger.warning(

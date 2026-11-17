@@ -2,18 +2,19 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID
 
-from .value_objects import AuthProvider
+from .value_objects import AuthProvider, UserRole
 
 
 @dataclass
 class UserCredentials:
     """
-    Domain entity representing user credentials (email and hashed password).
+    Domain entity representing user credentials (email, hashed password, and role).
     """
     id: UUID
     email: str
     passwordHash: str | None
     createdAt: datetime
+    role: UserRole = UserRole.USER
 
     def change_password(self, new_password_hash: str) -> None:
         """Updates the hashed password of the user."""

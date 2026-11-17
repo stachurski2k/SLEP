@@ -18,6 +18,7 @@ class AuthResponseDTO:
     userId: UUID
     email: str
     tokens: TokenDTO
+    role: str = "user"
 
 
 @dataclass(frozen=True)
@@ -27,3 +28,4 @@ class UserCredentialsDTO:
     email: str
     hasPassword: bool
     createdAt: datetime
+    role: str = "user"
