@@ -1,3 +1,5 @@
+export type UserRole = 'user' | 'admin'
+
 export type TokenResponse = {
   accessToken: string
   refreshToken: string
@@ -8,6 +10,7 @@ export type TokenResponse = {
 export type AuthResponse = {
   userId: string
   email: string
+  role: UserRole
   tokens: TokenResponse
 }
 
@@ -22,6 +25,10 @@ export type RegisterRequest = {
   passwordConfirmation: string
 }
 
+export type GoogleLoginRequest = {
+  idToken: string
+}
+
 export type ChangePasswordRequest = {
   currentPassword: string
   newPassword: string
@@ -30,4 +37,26 @@ export type ChangePasswordRequest = {
 
 export type MessageResponse = {
   message: string
+}
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: {
+            client_id: string
+            callback: (response: { credential?: string }) => void
+            auto_select?: boolean
+            cancel_on_tap_outside?: boolean
+          }) => void
+          renderButton: (
+            parent: HTMLElement,
+            options: Record<string, string | number | boolean>,
+          ) => void
+          prompt: (notification?: (notification: unknown) => void) => void
+        }
+      }
+    }
+  }
 }

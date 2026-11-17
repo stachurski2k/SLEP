@@ -16,7 +16,10 @@ export function getStoredSession(): AuthResponse | null {
     ) {
       return null
     }
-    return parsed
+    return {
+      ...parsed,
+      role: parsed.role === 'admin' ? 'admin' : 'user',
+    }
   } catch {
     return null
   }

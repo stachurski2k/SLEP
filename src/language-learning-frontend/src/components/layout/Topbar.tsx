@@ -11,6 +11,8 @@ export default function Topbar() {
     navigate(routes.login, { replace: true })
   }
 
+  const isAdmin = session?.role === 'admin'
+
   return (
     <header className="flex min-h-[76px] items-center justify-between border-b border-slate-400/15 bg-[#070b12]/70 px-7 backdrop-blur-[18px] max-[640px]:px-5">
       <div className="flex items-center gap-3.5">
@@ -22,9 +24,20 @@ export default function Topbar() {
           <h1 className="m-0 text-xl font-semibold text-[#f5f7fb]">Sign language learning</h1>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {session?.email && (
-          <span className="hidden text-sm text-[#a8b0c3] sm:inline">{session.email}</span>
+          <div className="hidden items-center gap-2.5 sm:flex">
+            <span className="text-sm text-[#a8b0c3]">{session.email}</span>
+            <span
+              className={`rounded-md border px-2 py-0.5 text-[0.68rem] font-semibold tracking-wider uppercase ${
+                isAdmin
+                  ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-300'
+                  : 'border-slate-400/20 bg-slate-400/10 text-[#a8b0c3]'
+              }`}
+            >
+              {session.role}
+            </span>
+          </div>
         )}
         <button
           type="button"

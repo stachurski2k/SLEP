@@ -1,6 +1,7 @@
 import type {
   AuthResponse,
   ChangePasswordRequest,
+  GoogleLoginRequest,
   LoginRequest,
   MessageResponse,
   RegisterRequest,
@@ -31,6 +32,20 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
 
   if (!response.ok) {
     throw new Error(await parseApiError(response, 'Could not create account.'))
+  }
+
+  return response.json() as Promise<AuthResponse>
+}
+
+export async function loginWithGoogle(payload: GoogleLoginRequest): Promise<AuthResponse> {
+  const response = await fetch(`${apiBaseUrl}/api/v1/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, 'Google authentication failed.'))
   }
 
   return response.json() as Promise<AuthResponse>
