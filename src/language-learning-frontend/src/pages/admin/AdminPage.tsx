@@ -12,6 +12,7 @@ import {
   fetchUnits,
   getAvailablePoses,
   publishLesson,
+  updateExercise,
   updateLesson,
   updateUnit,
 } from '../../api/learning'
@@ -58,6 +59,7 @@ export default function AdminPage() {
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
 
   const [showExerciseModal, setShowExerciseModal] = useState(false)
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null)
   const [exerciseForm, setExerciseForm] = useState<ExerciseCreateInput>({
     type: 'single',
     difficulty: 'beginner',
@@ -341,6 +343,7 @@ export default function AdminPage() {
   // Exercise handlers
   const handleOpenCreateExercise = () => {
     if (!activeLessonId) return
+    setEditingExerciseId(null)
     const defaultPose = posesInfo.poses[0] || 'YES'
     setExerciseForm({
       type: 'single',
@@ -353,13 +356,49 @@ export default function AdminPage() {
     setShowExerciseModal(true)
   }
 
+  const handleOpenEditExercise = (exercise: ExerciseEntity) => {
+    setEditingExerciseId(exercise.id)
+    setExerciseForm({
+      type: exercise.type,
+      difficulty: exercise.difficulty,
+      points: exercise.points,
+      content: exercise.content,
+      answer: exercise.answer,
+      media: exercise.media ? exercise.media.map((m) => ({ type: m.type, url: m.url })) : [],
+    })
+    setShowExerciseModal(true)
+  }
+
   const handlePoseSelect = (selectedPose: string) => {
     setExerciseForm((prev) => ({
       ...prev,
       answer: selectedPose,
-      content: prev.content.startsWith('Wykonaj znak dla:') || !prev.content
-        ? `Wykonaj znak dla: ${selectedPose}`
-        : prev.content,
+      content:
+        prev.content.startsWith('Wykonaj znak dla:') || !prev.content
+          ? `Wykonaj znak dla: ${selectedPose}`
+          : prev.content,
+    }))
+  }
+
+  const handleAddMedia = (type: 'image' | 'video' = 'image') => {
+    setExerciseForm((prev) => ({
+      ...prev,
+      media: [...(prev.media || []), { type, url: '' }],
+    }))
+  }
+
+  const handleUpdateMedia = (index: number, field: 'type' | 'url', value: string) => {
+    setExerciseForm((prev) => {
+      const nextMedia = [...(prev.media || [])]
+      nextMedia[index] = { ...nextMedia[index], [field]: value }
+      return { ...prev, media: nextMedia }
+    })
+  }
+
+  const handleRemoveMedia = (index: number) => {
+    setExerciseForm((prev) => ({
+      ...prev,
+      media: (prev.media || []).filter((_, i) => i !== index),
     }))
   }
 
@@ -375,12 +414,32 @@ export default function AdminPage() {
       return
     }
 
+    const cleanMedia = (exerciseForm.media || [])
+      .filter((m) => m.url.trim().length > 0)
+      .map((m) => ({ type: m.type, url: m.url.trim() }))
+
     try {
-      await createExercise(activeLessonId, {
-        ...exerciseForm,
-        answer: exerciseForm.answer.trim().toUpperCase(),
-      })
-      toast.success('Utworzono zadanie.')
+      if (editingExerciseId) {
+        await updateExercise(editingExerciseId, {
+          type: exerciseForm.type,
+          difficulty: exerciseForm.difficulty,
+          points: exerciseForm.points,
+          content: exerciseForm.content.trim(),
+          answer: exerciseForm.answer.trim().toUpperCase(),
+          media: cleanMedia,
+        })
+        toast.success('Zaktualizowano zadanie.')
+      } else {
+        await createExercise(activeLessonId, {
+          type: exerciseForm.type,
+          difficulty: exerciseForm.difficulty,
+          points: exerciseForm.points,
+          content: exerciseForm.content.trim(),
+          answer: exerciseForm.answer.trim().toUpperCase(),
+          media: cleanMedia,
+        })
+        toast.success('Utworzono zadanie.')
+      }
       setShowExerciseModal(false)
       await loadExercises(activeLessonId)
     } catch (err) {
@@ -699,21 +758,43 @@ export default function AdminPage() {
                           {exercise.points} pkt
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => void handleDeleteExercise(exercise.id)}
-                        className="rounded p-1 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
-                        title="Usuń zadanie"
-                      >
-                        ✕
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditExercise(exercise)}
+                          className="rounded p-1 text-xs text-slate-400 hover:bg-white/10 hover:text-white"
+                          title="Edytuj zadanie"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteExercise(exercise.id)}
+                          className="rounded p-1 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
+                          title="Usuń zadanie"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
 
                     <p className="m-0 text-sm font-medium text-white">{exercise.content}</p>
 
                     {exercise.media && exercise.media.length > 0 && (
-                      <div className="flex items-center gap-2 text-xs text-[#738099]">
-                        <span>Załączone media: {exercise.media.length}</span>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        {exercise.media.map((m, mIdx) => (
+                          <a
+                            key={m.id || mIdx}
+                            href={m.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-700/60 bg-black/40 px-2 py-0.5 text-[0.7rem] text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300"
+                            title={`Otwórz materiał: ${m.url}`}
+                          >
+                            <span>{m.type === 'video' ? '🎥' : '🖼️'}</span>
+                            <span className="max-w-[130px] truncate">{m.type}: {m.url.split('/').pop() || 'link'}</span>
+                          </a>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -909,11 +990,13 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODAL: Tworzenie Zadania (Exercise) */}
+      {/* MODAL: Tworzenie / Edycja Zadania (Exercise) */}
       {showExerciseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className={`${panelClass} max-h-[90vh] w-full max-w-lg overflow-y-auto p-6`}>
-            <h3 className="m-0 text-xl font-bold text-white">Nowe Zadanie w Lekcji</h3>
+            <h3 className="m-0 text-xl font-bold text-white">
+              {editingExerciseId ? 'Edytuj Zadanie w Lekcji' : 'Nowe Zadanie w Lekcji'}
+            </h3>
             <p className="mt-1 text-xs text-emerald-400">Lekcja: {activeLesson?.title}</p>
 
             <form
@@ -1027,6 +1110,99 @@ export default function AdminPage() {
                 />
               </div>
 
+              {/* Materiały pomocnicze (Zdjęcia / Wideo) */}
+              <div className="rounded-xl border border-slate-400/20 bg-slate-900/50 p-3.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold text-white">
+                      Materiały pomocnicze (Media)
+                    </span>
+                    <p className="mt-0.5 mb-0 text-[0.72rem] text-[#a8b0c3]">
+                      Przypnij zdjęcia lub nagrania wideo jako materiały referencyjne.
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleAddMedia('image')}
+                      className="cursor-pointer rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-300 transition hover:bg-sky-500/20"
+                    >
+                      + Zdjęcie
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddMedia('video')}
+                      className="cursor-pointer rounded-lg border border-purple-400/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-300 transition hover:bg-purple-500/20"
+                    >
+                      + Wideo
+                    </button>
+                  </div>
+                </div>
+
+                {(!exerciseForm.media || exerciseForm.media.length === 0) ? (
+                  <p className="mt-3 mb-1 text-center text-xs text-[#738099]">
+                    Brak załączonych materiałów pomocniczych. Kliknij powyżej, aby dodać link.
+                  </p>
+                ) : (
+                  <div className="mt-3 flex flex-col gap-2.5">
+                    {exerciseForm.media.map((m, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-lg border border-slate-400/15 bg-white/5 p-2.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={m.type}
+                            onChange={(e) => handleUpdateMedia(idx, 'type', e.target.value)}
+                            className="rounded-lg border border-slate-400/20 bg-[#0d1420] px-2 py-1.5 text-xs text-white"
+                          >
+                            <option value="image">Zdjęcie</option>
+                            <option value="video">Wideo</option>
+                          </select>
+                          <input
+                            type="url"
+                            placeholder="Wklej URL zdjęcia lub wideo (https://...)"
+                            value={m.url}
+                            onChange={(e) => handleUpdateMedia(idx, 'url', e.target.value)}
+                            className="flex-1 rounded-lg border border-slate-400/20 bg-[#0d1420] px-2.5 py-1.5 text-xs text-white placeholder-slate-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMedia(idx)}
+                            className="rounded-lg p-1.5 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
+                            title="Usuń materiał"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Podgląd live jeśli podano URL */}
+                        {m.url.trim().length > 8 && (
+                          <div className="mt-2 overflow-hidden rounded-md border border-slate-700/50 bg-black/40 p-1.5 text-center">
+                            {m.type === 'image' ? (
+                              <img
+                                src={m.url}
+                                alt={`Podgląd ${idx + 1}`}
+                                className="mx-auto max-h-32 rounded object-contain"
+                                onError={(e) => {
+                                  ;(e.target as HTMLElement).style.display = 'none'
+                                }}
+                              />
+                            ) : (
+                              <video
+                                src={m.url}
+                                controls
+                                className="mx-auto max-h-32 rounded"
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="mt-3 flex justify-end gap-2.5">
                 <button
                   type="button"
@@ -1036,7 +1212,7 @@ export default function AdminPage() {
                   Anuluj
                 </button>
                 <button type="submit" className={`${primaryButtonClass} !min-h-10 text-sm`}>
-                  Zapisz Zadanie
+                  {editingExerciseId ? 'Zaktualizuj Zadanie' : 'Zapisz Zadanie'}
                 </button>
               </div>
             </form>

@@ -35,6 +35,14 @@ export type ExerciseUpdateInput = {
   points: number
   content: string
   answer: string
+  media?: Array<{ type: 'video' | 'image'; url: string }>
+}
+
+export type ValidationResultResponse = {
+  isCorrect: boolean
+  earnedPoints: number
+  expectedAnswer: string
+  feedback: string
 }
 
 export type LessonEntity = {

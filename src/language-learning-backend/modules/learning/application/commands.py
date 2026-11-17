@@ -56,6 +56,7 @@ class UpdateExerciseCommand:
     points: int
     content: str
     answer: str
+    mediaList: list[CreateMediaCommand] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

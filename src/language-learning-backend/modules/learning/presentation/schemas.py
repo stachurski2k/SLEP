@@ -42,6 +42,7 @@ class ExerciseUpdateRequest(BaseModel):
     points: int = Field(default=10, ge=1, le=100, description="Reward points")
     content: str = Field(..., min_length=1, description="Prompt or task instruction")
     answer: str = Field(..., min_length=1, description="Expected sign or sentence answer")
+    media: list[MediaCreateRequest] = Field(default_factory=list, description="Attached media assets")
 
 
 class ExercisePublicResponse(BaseModel):

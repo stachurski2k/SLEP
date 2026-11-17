@@ -374,3 +374,27 @@ def test_api_unit_and_exercise_endpoints(client):
     val_data = res.json()
     assert val_data["isCorrect"] is False
     assert val_data["earnedPoints"] == 0
+
+    # 8. Update exercise with updated media list
+    res = client.put(
+        f"/api/v1/exercises/{ex_id}",
+        json={
+            "type": "single",
+            "difficulty": "intermediate",
+            "points": 20,
+            "content": "Pokaż znak: Cześć (dokładniej)",
+            "answer": "cześć",
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://storage.slep.local/images/czesc_updated.png",
+                }
+            ],
+        },
+    )
+    assert res.status_code == 200, res.text
+    updated_ex = res.json()
+    assert updated_ex["points"] == 20
+    assert len(updated_ex["media"]) == 1
+    assert updated_ex["media"][0]["type"] == "image"
+    assert updated_ex["media"][0]["url"] == "https://storage.slep.local/images/czesc_updated.png"

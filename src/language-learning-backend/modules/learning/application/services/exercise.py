@@ -69,6 +69,16 @@ class ExerciseApplicationServiceImpl(ExerciseApplicationService):
         exercise.points = command.points
         exercise.content = command.content.strip()
         exercise.answer = command.answer.strip()
+        if command.mediaList is not None:
+            exercise.media = [
+                Media(
+                    id=uuid4(),
+                    exerciseId=exercise.id,
+                    type=MediaType(m.type),
+                    url=m.url.strip(),
+                )
+                for m in command.mediaList
+            ]
 
         await self._exercise_repo.save(exercise)
         return exercise

@@ -106,6 +106,9 @@ async def update_exercise(
         points=schema.points,
         content=schema.content,
         answer=schema.answer,
+        mediaList=[
+            CreateMediaCommand(type=m.type.value, url=m.url) for m in schema.media
+        ],
     )
     try:
         exercise = await service.updateExercise(command)

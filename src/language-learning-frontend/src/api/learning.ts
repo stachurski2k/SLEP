@@ -10,6 +10,7 @@ import type {
   UnitCreateInput,
   UnitEntity,
   UnitUpdateInput,
+  ValidationResultResponse,
 } from '../types/learning'
 import { authenticatedFetch, modelServiceUrl, parseApiError } from './client'
 
@@ -98,6 +99,14 @@ export async function fetchLessonsByUnit(unitId: string): Promise<LessonEntity[]
     throw new Error(await parseApiError(response, 'Nie udało się pobrać lekcji.'))
   }
   return response.json() as Promise<LessonEntity[]>
+}
+
+export async function fetchLessonDetails(lessonId: string): Promise<LessonEntity> {
+  const response = await authenticatedFetch(`/api/v1/lessons/${lessonId}`)
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, 'Nie udało się pobrać szczegółów lekcji.'))
+  }
+  return response.json() as Promise<LessonEntity>
 }
 
 export async function createLesson(unitId: string, data: LessonCreateInput): Promise<LessonEntity> {
@@ -191,4 +200,19 @@ export async function deleteExercise(exerciseId: string): Promise<void> {
   if (!response.ok) {
     throw new Error(await parseApiError(response, 'Nie udało się usunąć zadania.'))
   }
+}
+
+export async function validateExerciseAnswer(
+  exerciseId: string,
+  submittedAnswer: string,
+): Promise<ValidationResultResponse> {
+  const response = await authenticatedFetch(`/api/v1/exercises/${exerciseId}/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ submittedAnswer }),
+  })
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, 'Nie udało się zweryfikować odpowiedzi.'))
+  }
+  return response.json() as Promise<ValidationResultResponse>
 }
