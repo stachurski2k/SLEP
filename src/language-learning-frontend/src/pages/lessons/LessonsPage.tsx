@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router'
-import { lessons } from '../lesson'
-import { getLessonPath } from '../routes'
-import { panelClass, primaryButtonClass } from '../ui/classes'
+import { panelClass, primaryButtonClass } from '../../components/ui/classes'
+import { lessons } from '../../data/lessons'
+import { getLessonPath } from '../../router/routes'
 
 export default function LessonsPage() {
   const navigate = useNavigate()

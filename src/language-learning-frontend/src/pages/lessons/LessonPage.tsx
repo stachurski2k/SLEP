@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
-import { predictGesture } from '../actions'
-import { lessons, type Lesson } from '../lesson'
-import { routes } from '../routes'
-import { primaryButtonClass } from '../ui/classes'
+import { predictGesture } from '../../api/prediction'
+import { primaryButtonClass } from '../../components/ui/classes'
+import { lessons } from '../../data/lessons'
+import { routes } from '../../router/routes'
+import type { Lesson } from '../../types/lesson'
 
 const recordingDurationMs = 3_000
 const feedbackDurationMs = 2_000

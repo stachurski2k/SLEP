@@ -1,8 +1,4 @@
-export type Lesson = {
-  id: string
-  title: string
-  signs: readonly string[]
-}
+import type { Lesson } from '../types/lesson'
 
 // Labels match id_to_label in model-service/storage/embeddings/train_embeddings.npz.
 export const lessons: readonly Lesson[] = [
