@@ -12,16 +12,17 @@ RUN npm ci
 # Copy the rest of the application
 COPY . .
 
-# Build arguments
-ARG VITE_API_BASE_URL=http://localhost:8000
-ARG VITE_MODEL_SERVICE_URL=http://localhost:5001
-
-# Set environment variables from build args so Vite can pick them up
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_MODEL_SERVICE_URL=$VITE_MODEL_SERVICE_URL
+# Build arguments (optional overrides)
+ARG VITE_API_BASE_URL
+ARG VITE_MODEL_SERVICE_URL
+ARG VITE_GOOGLE_CLIENT_ID
 
 # Build the application
-RUN npm run build
+# If build args are passed and non-empty, use them; otherwise Vite loads .env automatically
+RUN if [ -n "$VITE_GOOGLE_CLIENT_ID" ]; then export VITE_GOOGLE_CLIENT_ID="$VITE_GOOGLE_CLIENT_ID"; fi && \
+    if [ -n "$VITE_API_BASE_URL" ]; then export VITE_API_BASE_URL="$VITE_API_BASE_URL"; fi && \
+    if [ -n "$VITE_MODEL_SERVICE_URL" ]; then export VITE_MODEL_SERVICE_URL="$VITE_MODEL_SERVICE_URL"; fi && \
+    npm run build
 
 # Production Stage
 FROM nginx:alpine
