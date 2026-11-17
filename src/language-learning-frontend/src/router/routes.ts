@@ -1,5 +1,6 @@
 export const routes = {
   login: '/login',
+  register: '/register',
   lessons: '/lessons',
   lesson: '/lessons/:lessonId',
 } as const
