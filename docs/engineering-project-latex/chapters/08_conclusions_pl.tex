@@ -1,0 +1,94 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Rozdział 8: Wnioski
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Wnioski}
+\label{chap:conclusions}
+
+\subsection{Realizacja celów pracy}
+\label{sec:conclusions-goals}
+
+W podrozdziale~\ref{sec:goals-scope} określono pięć celów projektu. Dwa z nich
+zostały w pełni zrealizowane w ramach prac przedstawionych w niniejszej pracy,
+a trzy pozostają niezrealizowane w chwili jej pisania.
+
+Cel dotyczący platformy do anotacji został osiągnięty dzięki systemowi opisanemu
+w rozdziale~\ref{chap:annotation-platform}: działającej, zdecentralizowanej
+aplikacji do gromadzenia danych, która obsługuje zarządzanie zbiorami danych,
+nagraniami wideo, klasami i typami gestów, asynchroniczną ekstrakcję punktów
+charakterystycznych z wykorzystaniem MediaPipe oraz przeglądarkowy edytor
+anotacji klipów. Całość można uruchomić lokalnie za pomocą Docker Compose.
+
+Cel dotyczący rozpoznawania izolowanych znaków w procesie wideo--glosy został
+osiągnięty dzięki systemowi opisanemu
+w rozdziale~\ref{chap:isolated-gloss-recognition}: wielocelowej architekturze
+opartej na wyszukiwaniu, ocenionej z wykorzystaniem pięciu enkoderów czasowych
+na podzbiorze ASL Citizen obejmującym 32 glosy. Enkoder Transformer osiągnął
+dokładność 1-NN wynoszącą 90,75\% oraz czułość dla każdej klasy przekraczającą
+0,75 dla wszystkich ocenianych glos.
+
+\todo{DO UZUPEŁNIENIA: Po ukończeniu rozdziałów~\ref{chap:text-translation},
+\ref{chap:sentence-level-translation} i~\ref{chap:educational-platform} należy
+podsumować, w jaki sposób i w jakim stopniu osiągnięto każdy z pozostałych celów
+-- tłumaczenie między glosami a tekstem w obu kierunkach, całościowe tłumaczenie
+na poziomie zdań oraz stworzenie edukacyjnej platformy demonstracyjnej --
+z odwołaniem do odpowiednich podrozdziałów prezentujących wyniki.}
+
+\subsection{Ograniczenia}
+\label{sec:conclusions-limitations}
+
+Głównym ograniczeniem systemu rozpoznawania izolowanych glos, zidentyfikowanym
+na podstawie analizy macierzy pomyłek, czułości dla poszczególnych klas,
+wizualizacji t-SNE oraz śledzenia odległości w parach pozytywnych i negatywnych
+(podrozdział~\ref{sec:gloss-recognition-discussion}), jest zmienność
+wewnątrzklasowa wynikająca z różnic w wykonywaniu znaków przez poszczególne osoby
+migające. Osoby niewidziane podczas trenowania generują bardziej rozproszone
+osadzenia niż osoby widziane, mimo że ogólna struktura klastrów zachowuje zdolność
+uogólniania. Obecne porównanie modeli jest ponadto ograniczone do podzbioru
+ASL Citizen obejmującego 32 glosy oraz do izolowanych, uprzednio wyodrębnionych
+znaków, a nie ciągłych wypowiedzi migowych.
+
+Do znanych ograniczeń platformy do anotacji
+(podrozdział~\ref{sec:annotation-system-architecture}) należą nieukończona obsługa
+przetwarzania eksportu zbiorów danych, metadane nagrań (FPS, czas trwania), które
+nie są jeszcze w pełni wyznaczane na podstawie przesłanych plików, brak
+uwierzytelniania i autoryzacji, ograniczona walidacja zakresów klipów i spójności
+zbiorów danych oraz ograniczony zakres testów automatycznych.
+
+\todo{DO UZUPEŁNIENIA: Po ukończeniu rozdziałów~\ref{chap:text-translation},
+\ref{chap:sentence-level-translation} i~\ref{chap:educational-platform} należy
+dodać właściwe im ograniczenia (np.\ wielkość i zakres korpusu glos i tekstu,
+propagację błędów między etapami rozpoznawania i tłumaczenia w całościowym potoku
+przetwarzania, ograniczenia użyteczności platformy edukacyjnej).}
+
+\subsection{Kierunki dalszych prac}
+\label{sec:conclusions-future-work}
+
+W podrozdziale~\ref{sec:gloss-recognition-discussion} wskazano kilka konkretnych
+rozszerzeń systemu rozpoznawania izolowanych glos: zastąpienie lub uzupełnienie
+klasyfikatora KNN dopasowaniem sekwencji opartym na dynamicznym dopasowaniu czasu
+(Dynamic Time Warping, DTW) na etapie wyszukiwania; zastąpienie funkcji straty
+rekonstrukcji MSE metodą soft-DTW jako różniczkowalną funkcją celu uczenia;
+zastosowanie FAISS do skalowalnego, przybliżonego wyszukiwania najbliższych
+sąsiadów poza obecnym benchmarkiem obejmującym 32 glosy; wprowadzenie grafowych
+sieci splotowych w celu jawnego kodowania topologii grafu szkieletu zamiast
+polegania na spłaszczonych wektorach punktów charakterystycznych; ocenę sieci
+LSTM operujących na kwaternionach do kodowania zależności czasowych
+z uwzględnieniem rotacji; oraz rozszerzenie systemu z rozpoznawania izolowanego
+na ciągłe za pomocą CTC, stanowiące podstawę potoku przetwarzania na poziomie
+zdań opisanego w rozdziale~\ref{chap:sentence-level-translation}. Warto zaznaczyć,
+że od czasu sporządzenia raportu badawczego stanowiącego podstawę niniejszej pracy
+w repozytorium projektu zaimplementowano już demonstrację rozpoznawania na żywo
+z kamery internetowej, łączącą enkoder Transformer z wyszukiwaniem za pomocą
+FAISS, zanim część powyższych rozszerzeń została formalnie opisana.
+
+W przypadku platformy do anotacji dalsze prace powinny obejmować ukończenie
+potoku przetwarzania eksportu zbiorów danych, usprawnienie śledzenia statusów
+zadań importu i eksportu, wyznaczanie metadanych nagrań bezpośrednio na podstawie
+przesłanych plików zamiast stosowania stałych wartości, dodanie uwierzytelniania
+ i autoryzacji oraz rozszerzenie zakresu testów automatycznych obejmujących API,
+proces roboczy i edytor we frontendzie.
+
+\todo{DO UZUPEŁNIENIA: Po ukończeniu rozdziałów~\ref{chap:text-translation},
+\ref{chap:sentence-level-translation} i~\ref{chap:educational-platform} należy
+dodać właściwe im kierunki dalszych prac.}

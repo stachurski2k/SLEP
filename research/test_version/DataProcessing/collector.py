@@ -1,5 +1,9 @@
+import argparse
+import atexit
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+
 os.environ["TF_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -156,7 +160,6 @@ def extract_landmarks(hands_result, pose_result) -> np.ndarray:
 def process_video(video_path: Path, hands, pose, timestamp_offset_ms: int):
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
-        print(f"  Cannot open video: {video_path}")
         return None, timestamp_offset_ms
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
@@ -189,54 +192,121 @@ def process_video(video_path: Path, hands, pose, timestamp_offset_ms: int):
     return np.array(sequence, dtype=np.float32), next_timestamp_offset_ms
 
 
-def collect_landmarks(dataset_dir: Path = DATASET_DIR, output_dir: Path = OUTPUT_DIR):
-    output_dir.mkdir(exist_ok=True)
+# --- Worker-process state -----------------------------------------------
+#
+# Each worker process in the pool gets its own HandLandmarker/PoseLandmarker
+# pair (created once via _init_worker) plus its own monotonically increasing
+# timestamp counter, mirroring the single-process behaviour but split across
+# processes. Landmarker instances cannot be shared across processes or
+# threads, so a process pool (rather than a thread pool) is used; the
+# TF/MKL/OMP thread-count env vars above are pinned to 1 so each worker stays
+# single-threaded and the pool scales cleanly across CPU cores.
+_worker_hands = None
+_worker_pose = None
+_worker_timestamp_offset_ms = 0
+
+
+def _init_worker():
+    global _worker_hands, _worker_pose, _worker_timestamp_offset_ms
+    _worker_hands, _worker_pose = create_landmarkers()
+    _worker_timestamp_offset_ms = 0
+    atexit.register(_worker_hands.close)
+    atexit.register(_worker_pose.close)
+
+
+def _process_video_task(video_path: Path, output_path: Path):
+    global _worker_timestamp_offset_ms
+
+    sequence, _worker_timestamp_offset_ms = process_video(
+        video_path,
+        _worker_hands,
+        _worker_pose,
+        _worker_timestamp_offset_ms,
+    )
+
+    if sequence is None:
+        return video_path, None
+
+    np.save(output_path, sequence)
+
+    pose_nan_ratio = float(np.isnan(sequence[:, 0:18]).any(axis=1).mean())
+    left_nan_ratio = float(np.isnan(sequence[:, 18:81]).any(axis=1).mean())
+    right_nan_ratio = float(np.isnan(sequence[:, 81:144]).any(axis=1).mean())
+
+    return video_path, (pose_nan_ratio, left_nan_ratio, right_nan_ratio)
+
+
+def _build_tasks(dataset_dir: Path, output_dir: Path):
+    tasks = []
     gesture_dirs = sorted(d for d in dataset_dir.iterdir() if d.is_dir())
 
-    hands, pose = create_landmarkers()
-    timestamp_offset_ms = 0
+    for gesture_dir in gesture_dirs:
+        output_gesture_dir = output_dir / gesture_dir.name
+        output_gesture_dir.mkdir(parents=True, exist_ok=True)
 
-    try:
-        for gesture_dir in gesture_dirs:
-            gesture_name = gesture_dir.name
-            output_gesture_dir = output_dir / gesture_name
-            output_gesture_dir.mkdir(exist_ok=True)
+        for video_path in sorted(gesture_dir.glob("*.mp4")):
+            output_path = output_gesture_dir / f"{video_path.stem}.npy"
+            tasks.append((video_path, output_path))
 
-            video_files = sorted(gesture_dir.glob("*.mp4"))
-            print(f"\nProcessing gesture: {gesture_name} ({len(video_files)} files)")
+    return tasks
 
-            for video_path in tqdm(video_files):
-                sequence, timestamp_offset_ms = process_video(
-                    video_path,
-                    hands,
-                    pose,
-                    timestamp_offset_ms,
-                )
-                if sequence is None:
-                    print(f"  Empty video: {video_path.name}")
-                    continue
 
-                output_path = output_gesture_dir / f"{video_path.stem}.npy"
-                np.save(output_path, sequence)
+def collect_landmarks(
+    dataset_dir: Path = DATASET_DIR,
+    output_dir: Path = OUTPUT_DIR,
+    num_workers: int | None = None,
+):
+    output_dir.mkdir(exist_ok=True)
+    tasks = _build_tasks(dataset_dir, output_dir)
 
-                pose_nan_ratio = np.isnan(sequence[:, 0:18]).any(axis=1).mean()
-                left_nan_ratio = np.isnan(sequence[:, 18:81]).any(axis=1).mean()
-                right_nan_ratio = np.isnan(sequence[:, 81:144]).any(axis=1).mean()
+    if not tasks:
+        print("No videos found.")
+        return
 
-                #if max(pose_nan_ratio, left_nan_ratio, right_nan_ratio) > 0.5:
-                print(
-                        f"  {video_path.name}: "
-                        f"pose {pose_nan_ratio:.0%}, "
-                        f"left {left_nan_ratio:.0%}, "
-                        f"right {right_nan_ratio:.0%} lost"
-                    )
-    finally:
-        hands.close()
-        pose.close()
+    num_workers = num_workers or max(1, os.cpu_count() or 1)
+    num_gestures = len({video_path.parent.name for video_path, _ in tasks})
+    print(f"Processing {len(tasks)} videos across {num_gestures} gesture(s) using {num_workers} worker process(es)")
+
+    with ProcessPoolExecutor(max_workers=num_workers, initializer=_init_worker) as executor:
+        futures = {
+            executor.submit(_process_video_task, video_path, output_path): video_path
+            for video_path, output_path in tasks
+        }
+
+        for future in tqdm(as_completed(futures), total=len(futures)):
+            video_path = futures[future]
+            gesture_name = video_path.parent.name
+
+            try:
+                _, nan_ratios = future.result()
+            except Exception as exc:
+                tqdm.write(f"  [{gesture_name}] {video_path.name}: failed ({exc})")
+                continue
+
+            if nan_ratios is None:
+                tqdm.write(f"  [{gesture_name}] {video_path.name}: empty/unreadable video")
+                continue
+
+            pose_nan_ratio, left_nan_ratio, right_nan_ratio = nan_ratios
+            tqdm.write(
+                f"  [{gesture_name}] {video_path.name}: "
+                f"pose {pose_nan_ratio:.0%}, "
+                f"left {left_nan_ratio:.0%}, "
+                f"right {right_nan_ratio:.0%} lost"
+            )
 
 
 if __name__ == "__main__":
-    collect_landmarks()
+    parser = argparse.ArgumentParser(description="Extract MediaPipe landmark features from dataset videos.")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of worker processes to use (default: number of CPU cores).",
+    )
+    args = parser.parse_args()
+
+    collect_landmarks(num_workers=args.workers)
     print("-" * 60)
     print(f"Landmark extraction finished and saved in {OUTPUT_DIR}")
     print("-" * 60)

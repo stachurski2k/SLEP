@@ -31,7 +31,7 @@ def faiss_search(index, query_embedding, k=10):
  
     distances, indices = index.search(query, k)
  
-    return indices[0]
+    return distances[0], indices[0]
 
 
 def dtw_decider(query_seq, candidate_indices, train_seq, train_labels):
@@ -51,8 +51,8 @@ def dtw_decider(query_seq, candidate_indices, train_seq, train_labels):
 def benchmark_faiss(index, val_emb, val_labels, train_labels):
     correct = 0
     for emb, true_label in zip(val_emb, val_labels):
-        idx = faiss_search(index, emb, k=1)[0]
-        pred = train_labels[idx]
+        _, indices = faiss_search(index, emb, k=1)
+        pred = train_labels[indices[0]]
 
         if pred == true_label:
             correct += 1
@@ -64,8 +64,8 @@ def benchmark_faiss_dtw(index, val_emb, val_seq, val_labels, train_seq, train_la
     correct = 0
 
     for emb, seq, true_label in zip(val_emb, val_seq, val_labels):
-        candidates = faiss_search(index, emb, k)
-        pred = dtw_decider(seq, candidates, train_seq, train_labels)
+        _, indices = faiss_search(index, emb, k)
+        pred = dtw_decider(seq, indices, train_seq, train_labels)
 
         if pred == true_label:
             correct += 1
