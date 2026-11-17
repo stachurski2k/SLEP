@@ -51,7 +51,7 @@ class LearningStatisticsResponse(BaseModel):
     userId: UUID
     totalXp: int
     completedLessons: int
-    completedCourses: int
+    completedUnits: int = 0
     averageAccuracy: float
     activeDaysCount: int
 

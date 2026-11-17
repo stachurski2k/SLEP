@@ -1,8 +1,8 @@
 from uuid import UUID, uuid4
 
 from ...domain.entities import Unit
-from ...domain.exceptions import CourseNotFoundError, UnitNotFoundError
-from ...domain.repositories import CourseRepository, UnitRepository
+from ...domain.exceptions import UnitNotFoundError
+from ...domain.repositories import UnitRepository
 from ..commands import CreateUnitCommand, UpdateUnitCommand
 from ..interfaces import UnitApplicationService
 
@@ -13,19 +13,12 @@ class UnitApplicationServiceImpl(UnitApplicationService):
     def __init__(
         self,
         unit_repository: UnitRepository,
-        course_repository: CourseRepository,
     ) -> None:
         self._unit_repo = unit_repository
-        self._course_repo = course_repository
 
     async def createUnit(self, command: CreateUnitCommand) -> Unit:
-        course = await self._course_repo.get_by_id(command.courseId)
-        if course is None:
-            raise CourseNotFoundError(f"Course with ID '{command.courseId}' not found.")
-
         unit = Unit(
             id=uuid4(),
-            courseId=command.courseId,
             title=command.title.strip(),
             order=command.order,
         )
@@ -51,5 +44,5 @@ class UnitApplicationServiceImpl(UnitApplicationService):
     async def getUnit(self, unit_id: UUID) -> Unit | None:
         return await self._unit_repo.get_by_id(unit_id)
 
-    async def getUnitsByCourse(self, course_id: UUID) -> list[Unit]:
-        return await self._unit_repo.list_by_course(course_id)
+    async def listUnits(self) -> list[Unit]:
+        return await self._unit_repo.list_all()

@@ -100,7 +100,7 @@ async def root():
         "health": "/health",
         "users_api": "/api/v1/users",
         "auth_api": "/api/v1/auth",
-        "learning_api": "/api/v1/courses",
+        "learning_api": "/api/v1/units",
         "progress_api": "/api/v1/progress",
         "statistics_api": "/api/v1/statistics",
     }

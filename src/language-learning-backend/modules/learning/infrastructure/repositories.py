@@ -4,71 +4,14 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..domain.entities import Course, Exercise, Lesson, Unit
+from ..domain.entities import Exercise, Lesson, Unit
 from ..domain.repositories import (
-    CourseRepository,
     ExerciseRepository,
     LessonRepository,
     UnitRepository,
 )
-from ..domain.value_objects import ContentStatus, Difficulty, SignLanguage
 from .mappers import LearningMapper
-from .models import CourseModel, ExerciseModel, LessonModel, MediaModel, UnitModel
-
-
-class PostgresCourseRepository(CourseRepository):
-    """SQLAlchemy implementation of CourseRepository."""
-
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
-
-    async def get_by_id(self, course_id: UUID) -> Course | None:
-        stmt = (
-            select(CourseModel)
-            .options(selectinload(CourseModel.units).selectinload(UnitModel.lessons))
-            .where(CourseModel.id == course_id)
-        )
-        result = await self._session.execute(stmt)
-        model = result.scalar_one_or_none()
-        return LearningMapper.course_to_domain(model) if model else None
-
-    async def list_all(
-        self,
-        language: SignLanguage | None = None,
-        difficulty: Difficulty | None = None,
-        status: ContentStatus | None = None,
-    ) -> list[Course]:
-        stmt = select(CourseModel).options(selectinload(CourseModel.units))
-
-        if language:
-            stmt = stmt.where(CourseModel.language == language.value)
-        if difficulty:
-            stmt = stmt.where(CourseModel.difficulty == difficulty.value)
-        if status:
-            stmt = stmt.where(CourseModel.status == status.value)
-
-        stmt = stmt.order_by(CourseModel.created_at.desc())
-        result = await self._session.execute(stmt)
-        models = result.scalars().all()
-        return [LearningMapper.course_to_domain(m) for m in models]
-
-    async def save(self, course: Course) -> None:
-        stmt = select(CourseModel).where(CourseModel.id == course.id)
-        result = await self._session.execute(stmt)
-        existing = result.scalar_one_or_none()
-
-        if existing is None:
-            model = LearningMapper.course_to_persistence(course)
-            self._session.add(model)
-        else:
-            LearningMapper.course_to_persistence(course, existing_model=existing)
-
-        await self._session.flush()
-
-    async def delete(self, course_id: UUID) -> None:
-        stmt = delete(CourseModel).where(CourseModel.id == course_id)
-        await self._session.execute(stmt)
-        await self._session.flush()
+from .models import ExerciseModel, LessonModel, MediaModel, UnitModel
 
 
 class PostgresUnitRepository(UnitRepository):
@@ -87,11 +30,10 @@ class PostgresUnitRepository(UnitRepository):
         model = result.scalar_one_or_none()
         return LearningMapper.unit_to_domain(model) if model else None
 
-    async def list_by_course(self, course_id: UUID) -> list[Unit]:
+    async def list_all(self) -> list[Unit]:
         stmt = (
             select(UnitModel)
             .options(selectinload(UnitModel.lessons))
-            .where(UnitModel.course_id == course_id)
             .order_by(UnitModel.order_no.asc())
         )
         result = await self._session.execute(stmt)

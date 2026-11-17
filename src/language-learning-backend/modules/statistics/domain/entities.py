@@ -52,6 +52,6 @@ class LearningStatistics:
     userId: UUID
     totalXp: int
     completedLessons: int
-    completedCourses: int
-    averageAccuracy: float
-    activeDaysCount: int
+    completedUnits: int = 0
+    averageAccuracy: float = 0.0
+    activeDaysCount: int = 0

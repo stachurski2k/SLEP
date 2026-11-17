@@ -1,37 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from .entities import Course, Exercise, Lesson, Unit
-from .value_objects import ContentStatus, Difficulty, SignLanguage
-
-
-class CourseRepository(ABC):
-    """Repository port for Course aggregate."""
-
-    @abstractmethod
-    async def get_by_id(self, course_id: UUID) -> Course | None:
-        """Retrieves a course by its unique identifier (optionally with units hierarchy)."""
-        ...
-
-    @abstractmethod
-    async def list_all(
-        self,
-        language: SignLanguage | None = None,
-        difficulty: Difficulty | None = None,
-        status: ContentStatus | None = None,
-    ) -> list[Course]:
-        """Lists courses matching the given filter criteria."""
-        ...
-
-    @abstractmethod
-    async def save(self, course: Course) -> None:
-        """Persists a new or existing course."""
-        ...
-
-    @abstractmethod
-    async def delete(self, course_id: UUID) -> None:
-        """Deletes a course and all child units/lessons via cascade."""
-        ...
+from .entities import Exercise, Lesson, Unit
 
 
 class UnitRepository(ABC):
@@ -43,8 +13,8 @@ class UnitRepository(ABC):
         ...
 
     @abstractmethod
-    async def list_by_course(self, course_id: UUID) -> list[Unit]:
-        """Lists all units belonging to a specific course ordered by sequence."""
+    async def list_all(self) -> list[Unit]:
+        """Lists all units ordered by sequence."""
         ...
 
     @abstractmethod

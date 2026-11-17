@@ -3,27 +3,9 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class CreateCourseCommand:
-    title: str
-    description: str
-    difficulty: str
-    language: str
-
-
-@dataclass(frozen=True)
-class UpdateCourseCommand:
-    courseId: UUID
-    title: str
-    description: str
-    difficulty: str
-    language: str
-
-
-@dataclass(frozen=True)
 class CreateUnitCommand:
-    courseId: UUID
     title: str
-    order: int
+    order: int = 1
 
 
 @dataclass(frozen=True)

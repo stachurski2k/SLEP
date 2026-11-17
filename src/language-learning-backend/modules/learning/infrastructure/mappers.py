@@ -1,58 +1,21 @@
-from ..domain.entities import Course, Exercise, Lesson, Media, Unit
+from ..domain.entities import Exercise, Lesson, Media, Unit
 from ..domain.value_objects import (
     ContentStatus,
     Difficulty,
     ExerciseType,
     MediaType,
-    SignLanguage,
 )
-from .models import CourseModel, ExerciseModel, LessonModel, MediaModel, UnitModel
+from .models import ExerciseModel, LessonModel, MediaModel, UnitModel
 
 
 class LearningMapper:
     """Mapper between domain entities and persistence models."""
 
     @staticmethod
-    def course_to_domain(model: CourseModel) -> Course:
-        units = [LearningMapper.unit_to_domain(u) for u in model.units] if model.units else []
-        return Course(
-            id=model.id,
-            title=model.title,
-            description=model.description,
-            difficulty=Difficulty(model.difficulty),
-            language=SignLanguage(model.language),
-            status=ContentStatus(model.status),
-            createdAt=model.created_at,
-            units=units,
-        )
-
-    @staticmethod
-    def course_to_persistence(
-        entity: Course, existing_model: CourseModel | None = None
-    ) -> CourseModel:
-        if existing_model is None:
-            return CourseModel(
-                id=entity.id,
-                title=entity.title,
-                description=entity.description,
-                difficulty=entity.difficulty.value,
-                language=entity.language.value,
-                status=entity.status.value,
-                created_at=entity.createdAt,
-            )
-        existing_model.title = entity.title
-        existing_model.description = entity.description
-        existing_model.difficulty = entity.difficulty.value
-        existing_model.language = entity.language.value
-        existing_model.status = entity.status.value
-        return existing_model
-
-    @staticmethod
     def unit_to_domain(model: UnitModel) -> Unit:
         lessons = [LearningMapper.lesson_to_domain(l) for l in model.lessons] if model.lessons else []
         return Unit(
             id=model.id,
-            courseId=model.course_id,
             title=model.title,
             order=model.order_no,
             lessons=lessons,
@@ -65,7 +28,6 @@ class LearningMapper:
         if existing_model is None:
             return UnitModel(
                 id=entity.id,
-                course_id=entity.courseId,
                 title=entity.title,
                 order_no=entity.order,
             )

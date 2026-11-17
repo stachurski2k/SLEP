@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class Difficulty(str, Enum):
-    """Course and exercise difficulty level."""
+    """Unit, lesson, and exercise difficulty level."""
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"
@@ -21,7 +21,7 @@ class ExerciseType(str, Enum):
 
 
 class ContentStatus(str, Enum):
-    """Publication lifecycle status for courses and lessons."""
+    """Publication lifecycle status for units and lessons."""
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"

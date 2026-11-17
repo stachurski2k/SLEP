@@ -3,15 +3,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
-from modules.learning.domain.entities import Course, Exercise, Lesson, Media, Unit
+from modules.learning.domain.entities import Exercise, Lesson, Media, Unit
 from modules.learning.domain.exceptions import (
-    CourseNotFoundError,
     ExerciseNotFoundError,
     LessonNotFoundError,
     UnitNotFoundError,
 )
 from modules.learning.domain.repositories import (
-    CourseRepository,
     ExerciseRepository,
     LessonRepository,
     UnitRepository,
@@ -21,10 +19,8 @@ from modules.learning.domain.value_objects import (
     Difficulty,
     ExerciseType,
     MediaType,
-    SignLanguage,
 )
 from modules.learning.application.commands import (
-    CreateCourseCommand,
     CreateExerciseCommand,
     CreateLessonCommand,
     CreateMediaCommand,
@@ -32,13 +28,11 @@ from modules.learning.application.commands import (
     ValidateAnswerCommand,
 )
 from modules.learning.application.services import (
-    CourseApplicationServiceImpl,
     ExerciseApplicationServiceImpl,
     LessonApplicationServiceImpl,
     UnitApplicationServiceImpl,
 )
 from modules.learning.presentation.dependencies import (
-    get_course_service,
     get_exercise_service,
     get_lesson_service,
     get_unit_service,
@@ -47,35 +41,6 @@ from modules.learning.presentation.dependencies import (
 
 # --- IN-MEMORY REPOSITORIES FOR TESTING ---
 
-class InMemoryCourseRepository(CourseRepository):
-    def __init__(self) -> None:
-        self.items: dict[UUID, Course] = {}
-
-    async def get_by_id(self, course_id: UUID) -> Course | None:
-        return self.items.get(course_id)
-
-    async def list_all(
-        self,
-        language: SignLanguage | None = None,
-        difficulty: Difficulty | None = None,
-        status: ContentStatus | None = None,
-    ) -> list[Course]:
-        res = list(self.items.values())
-        if language:
-            res = [c for c in res if c.language == language]
-        if difficulty:
-            res = [c for c in res if c.difficulty == difficulty]
-        if status:
-            res = [c for c in res if c.status == status]
-        return res
-
-    async def save(self, course: Course) -> None:
-        self.items[course.id] = course
-
-    async def delete(self, course_id: UUID) -> None:
-        self.items.pop(course_id, None)
-
-
 class InMemoryUnitRepository(UnitRepository):
     def __init__(self) -> None:
         self.items: dict[UUID, Unit] = {}
@@ -83,8 +48,8 @@ class InMemoryUnitRepository(UnitRepository):
     async def get_by_id(self, unit_id: UUID) -> Unit | None:
         return self.items.get(unit_id)
 
-    async def list_by_course(self, course_id: UUID) -> list[Unit]:
-        units = [u for u in self.items.values() if u.courseId == course_id]
+    async def list_all(self) -> list[Unit]:
+        units = list(self.items.values())
         return sorted(units, key=lambda u: u.order)
 
     async def save(self, unit: Unit) -> None:
@@ -135,7 +100,6 @@ class InMemoryExerciseRepository(ExerciseRepository):
 @pytest.fixture
 def repos():
     return {
-        "course": InMemoryCourseRepository(),
         "unit": InMemoryUnitRepository(),
         "lesson": InMemoryLessonRepository(),
         "exercise": InMemoryExerciseRepository(),
@@ -144,14 +108,8 @@ def repos():
 
 @pytest.fixture
 def services(repos):
-    course_svc = CourseApplicationServiceImpl(
-        course_repository=repos["course"],
-        unit_repository=repos["unit"],
-        lesson_repository=repos["lesson"],
-    )
     unit_svc = UnitApplicationServiceImpl(
         unit_repository=repos["unit"],
-        course_repository=repos["course"],
     )
     lesson_svc = LessonApplicationServiceImpl(
         lesson_repository=repos["lesson"],
@@ -163,7 +121,6 @@ def services(repos):
         lesson_repository=repos["lesson"],
     )
     return {
-        "course": course_svc,
         "unit": unit_svc,
         "lesson": lesson_svc,
         "exercise": exercise_svc,
@@ -172,7 +129,6 @@ def services(repos):
 
 @pytest.fixture
 def client(services):
-    app.dependency_overrides[get_course_service] = lambda: services["course"]
     app.dependency_overrides[get_unit_service] = lambda: services["unit"]
     app.dependency_overrides[get_lesson_service] = lambda: services["lesson"]
     app.dependency_overrides[get_exercise_service] = lambda: services["exercise"]
@@ -227,53 +183,44 @@ def test_exercise_validation_domain():
     assert points == 0
 
 
-def test_course_status_transitions():
-    course = Course(
+def test_unit_and_lesson_order_domain():
+    unit = Unit(
         id=uuid4(),
-        title="PJM Podstawy",
-        description="Kurs podstawowy PJM",
-        difficulty=Difficulty.BEGINNER,
-        language=SignLanguage.PJM,
+        title="Unit 1",
+        order=1,
+    )
+    assert unit.order == 1
+    unit.reorder(2)
+    assert unit.order == 2
+
+    lesson = Lesson(
+        id=uuid4(),
+        unitId=unit.id,
+        title="Lesson 1",
+        description="Description",
+        order=1,
         status=ContentStatus.DRAFT,
     )
-    assert course.status == ContentStatus.DRAFT
-
-    course.publish()
-    assert course.status == ContentStatus.PUBLISHED
-
-    course.archive()
-    assert course.status == ContentStatus.ARCHIVED
+    assert lesson.status == ContentStatus.DRAFT
+    lesson.publish()
+    assert lesson.status == ContentStatus.PUBLISHED
 
 
 # --- APPLICATION SERVICE TESTS ---
 
 @pytest.mark.asyncio
 async def test_full_learning_flow_services(services):
-    # 1. Create course
-    course_dto = await services["course"].createCourse(
-        CreateCourseCommand(
-            title="ASL Beginners",
-            description="Learn ASL basic signs",
-            difficulty="beginner",
-            language="asl",
-        )
-    )
-    assert course_dto.title == "ASL Beginners"
-    assert course_dto.language == "asl"
-    assert course_dto.status == "draft"
-
-    # 2. Create unit
+    # 1. Create unit
     unit_dto = await services["unit"].createUnit(
         CreateUnitCommand(
-            courseId=course_dto.id,
             title="Unit 1: Alphabet & Greetings",
             order=1,
         )
     )
-    assert unit_dto.courseId == course_dto.id
+    assert unit_dto.title == "Unit 1: Alphabet & Greetings"
     assert unit_dto.order == 1
 
-    # 3. Create lesson
+    # 2. Create lesson
     lesson_dto = await services["lesson"].createLesson(
         CreateLessonCommand(
             unitId=unit_dto.id,
@@ -284,7 +231,7 @@ async def test_full_learning_flow_services(services):
     )
     assert lesson_dto.unitId == unit_dto.id
 
-    # 4. Create exercise
+    # 3. Create exercise
     exercise_dto = await services["exercise"].createExercise(
         CreateExerciseCommand(
             lessonId=lesson_dto.id,
@@ -306,14 +253,14 @@ async def test_full_learning_flow_services(services):
     assert len(exercise_dto.media) == 1
     assert exercise_dto.media[0].url == "https://s3.example.com/videos/hello.mp4"
 
-    # 5. Public exercise query (answer MUST NOT be present)
+    # 4. Public exercise query (answer MUST NOT be present)
     pub_dto = await services["exercise"].getExercisePublic(exercise_dto.id)
     assert pub_dto is not None
     assert pub_dto.id == exercise_dto.id
     assert pub_dto.content == "Perform sign: Hello"
     assert not hasattr(pub_dto, "answer")
 
-    # 6. Validate answer
+    # 5. Validate answer
     val_correct = await services["exercise"].validateAnswer(
         ValidateAnswerCommand(exerciseId=exercise_dto.id, submittedAnswer="HELLO")
     )
@@ -331,33 +278,25 @@ async def test_full_learning_flow_services(services):
 
 # --- FASTAPI ENDPOINT TESTS ---
 
-def test_api_course_and_exercise_endpoints(client):
-    # 1. Create course
+def test_api_unit_and_exercise_endpoints(client):
+    # 1. Create unit
     res = client.post(
-        "/api/v1/courses",
+        "/api/v1/units",
         json={
-            "title": "PJM dla początkujących",
-            "description": "Kurs polskiego języka migowego",
-            "difficulty": "beginner",
-            "language": "pjm",
-        },
-    )
-    assert res.status_code == 201, res.text
-    course_data = res.json()
-    course_id = course_data["id"]
-    assert course_data["language"] == "pjm"
-
-    # 2. Create unit
-    res = client.post(
-        f"/api/v1/units/for-course/{course_id}",
-        json={
-            "title": "Moduł 1",
+            "title": "Moduł 1: Podstawy PJM",
             "order": 1,
         },
     )
     assert res.status_code == 201, res.text
     unit_data = res.json()
     unit_id = unit_data["id"]
+    assert unit_data["title"] == "Moduł 1: Podstawy PJM"
+
+    # 2. List units
+    res = client.get("/api/v1/units")
+    assert res.status_code == 200, res.text
+    units = res.json()
+    assert len(units) >= 1
 
     # 3. Create lesson
     res = client.post(

@@ -9,47 +9,16 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from shared.database import Base
 
 
-class CourseModel(Base):
-    """Persistence model for language courses."""
-    __tablename__ = "courses"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    title: Mapped[str] = mapped_column(String(200), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    difficulty: Mapped[str] = mapped_column(String(20), nullable=False)
-    language: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
-    status: Mapped[str] = mapped_column(String(20), default="draft", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-
-    units: Mapped[list["UnitModel"]] = relationship(
-        "UnitModel",
-        back_populates="course",
-        cascade="all, delete-orphan",
-        order_by="UnitModel.order_no",
-    )
-
-
 class UnitModel(Base):
-    """Persistence model for course thematic units."""
+    """Persistence model for thematic units."""
     __tablename__ = "units"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    course_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("courses.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     order_no: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-    course: Mapped["CourseModel"] = relationship("CourseModel", back_populates="units")
     lessons: Mapped[list["LessonModel"]] = relationship(
         "LessonModel",
         back_populates="unit",

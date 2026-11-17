@@ -1,13 +1,11 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from ..domain.entities import Course, Exercise, Lesson, Unit
+from ..domain.entities import Exercise, Lesson, Unit
 from .commands import (
-    CreateCourseCommand,
     CreateExerciseCommand,
     CreateLessonCommand,
     CreateUnitCommand,
-    UpdateCourseCommand,
     UpdateExerciseCommand,
     UpdateLessonCommand,
     UpdateUnitCommand,
@@ -19,49 +17,8 @@ from .dtos import (
 )
 
 
-class CourseApplicationService(ABC):
-    """Application service interface for course lifecycle management."""
-
-    @abstractmethod
-    async def createCourse(self, command: CreateCourseCommand) -> Course:
-        ...
-
-    @abstractmethod
-    async def updateCourse(self, command: UpdateCourseCommand) -> Course:
-        ...
-
-    @abstractmethod
-    async def publishCourse(self, course_id: UUID) -> Course:
-        ...
-
-    @abstractmethod
-    async def archiveCourse(self, course_id: UUID) -> Course:
-        ...
-
-    @abstractmethod
-    async def deleteCourse(self, course_id: UUID) -> None:
-        ...
-
-    @abstractmethod
-    async def getCourse(self, course_id: UUID) -> Course | None:
-        ...
-
-    @abstractmethod
-    async def getCourseDetails(self, course_id: UUID) -> Course | None:
-        ...
-
-    @abstractmethod
-    async def listCourses(
-        self,
-        language: str | None = None,
-        difficulty: str | None = None,
-        status: str | None = None,
-    ) -> list[Course]:
-        ...
-
-
 class UnitApplicationService(ABC):
-    """Application service interface for course units."""
+    """Application service interface for learning units."""
 
     @abstractmethod
     async def createUnit(self, command: CreateUnitCommand) -> Unit:
@@ -80,7 +37,7 @@ class UnitApplicationService(ABC):
         ...
 
     @abstractmethod
-    async def getUnitsByCourse(self, course_id: UUID) -> list[Unit]:
+    async def listUnits(self) -> list[Unit]:
         ...
 
 

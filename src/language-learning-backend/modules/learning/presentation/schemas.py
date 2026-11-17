@@ -1,4 +1,3 @@
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -7,7 +6,6 @@ from ..domain.value_objects import (
     Difficulty,
     ExerciseType,
     MediaType,
-    SignLanguage,
 )
 
 
@@ -139,7 +137,6 @@ class UnitResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    courseId: UUID
     title: str
     order: int
 
@@ -148,48 +145,6 @@ class UnitDetailsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    courseId: UUID
     title: str
     order: int
     lessons: list[LessonResponse] = Field(default_factory=list)
-
-
-# --- Course Schemas ---
-
-class CourseCreateRequest(BaseModel):
-    title: str = Field(..., min_length=2, max_length=200)
-    description: str = Field(default="", max_length=2000)
-    difficulty: Difficulty = Field(...)
-    language: SignLanguage = Field(..., description="Sign language: asl or pjm")
-
-
-class CourseUpdateRequest(BaseModel):
-    title: str = Field(..., min_length=2, max_length=200)
-    description: str = Field(default="", max_length=2000)
-    difficulty: Difficulty = Field(...)
-    language: SignLanguage = Field(..., description="Sign language: asl or pjm")
-
-
-class CourseResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    title: str
-    description: str
-    difficulty: str
-    language: str
-    status: str
-    createdAt: datetime
-
-
-class CourseDetailsResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    title: str
-    description: str
-    difficulty: str
-    language: str
-    status: str
-    createdAt: datetime
-    units: list[UnitDetailsResponse] = Field(default_factory=list)

@@ -3,11 +3,6 @@ class LearningDomainError(Exception):
     pass
 
 
-class CourseNotFoundError(LearningDomainError):
-    """Raised when the requested course does not exist."""
-    pass
-
-
 class UnitNotFoundError(LearningDomainError):
     """Raised when the requested unit does not exist."""
     pass
@@ -24,7 +19,7 @@ class ExerciseNotFoundError(LearningDomainError):
 
 
 class InvalidContentStateError(LearningDomainError):
-    """Raised when an invalid state transition is attempted (e.g. publishing an empty or archived course)."""
+    """Raised when an invalid state transition is attempted (e.g. publishing an empty or archived unit)."""
     pass
 
 

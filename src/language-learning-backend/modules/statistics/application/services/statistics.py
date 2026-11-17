@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-from modules.learning.domain.repositories import CourseRepository, LessonRepository
+from modules.learning.domain.repositories import LessonRepository, UnitRepository
 from modules.progress.domain.repositories import (
     LessonProgressRepository,
     UserProgressRepository,
@@ -26,13 +26,13 @@ class StatisticsApplicationServiceImpl(StatisticsApplicationService):
         daily_activity_repository: DailyActivityRepository,
         user_progress_repository: UserProgressRepository,
         lesson_progress_repository: LessonProgressRepository,
-        course_repository: CourseRepository | None = None,
+        unit_repository: UnitRepository | None = None,
         lesson_repository: LessonRepository | None = None,
     ) -> None:
         self._daily_activity_repo = daily_activity_repository
         self._user_progress_repo = user_progress_repository
         self._lesson_progress_repo = lesson_progress_repository
-        self._course_repo = course_repository
+        self._unit_repo = unit_repository
         self._lesson_repo = lesson_repository
 
     async def recordActivity(
@@ -87,27 +87,26 @@ class StatisticsApplicationServiceImpl(StatisticsApplicationService):
         active_days_count = await self._daily_activity_repo.count_active_days(user_id)
         accuracy = await self.calculateAccuracy(user_id)
 
-        completed_courses_count = 0
-        if self._course_repo:
-            courses = await self._course_repo.list_all()
-            for c in courses:
-                full_course = await self._course_repo.get_by_id(c.id)
-                if not full_course or not full_course.units:
+        completed_units_count = 0
+        if self._unit_repo:
+            units = await self._unit_repo.list_all()
+            for u in units:
+                full_unit = await self._unit_repo.get_by_id(u.id)
+                if not full_unit or not full_unit.lessons:
                     continue
 
-                course_lesson_ids: set[UUID] = set()
-                for u in full_course.units:
-                    for l in u.lessons:
-                        course_lesson_ids.add(l.id)
+                unit_lesson_ids: set[UUID] = set()
+                for l in full_unit.lessons:
+                    unit_lesson_ids.add(l.id)
 
-                if course_lesson_ids and course_lesson_ids.issubset(completed_lesson_ids):
-                    completed_courses_count += 1
+                if unit_lesson_ids and unit_lesson_ids.issubset(completed_lesson_ids):
+                    completed_units_count += 1
 
         return LearningStatistics(
             userId=user_id,
             totalXp=total_xp,
             completedLessons=completed_count,
-            completedCourses=completed_courses_count,
+            completedUnits=completed_units_count,
             averageAccuracy=accuracy,
             activeDaysCount=active_days_count,
         )

@@ -1,6 +1,5 @@
-from .entities import Course, Exercise, Lesson, Media, Unit
+from .entities import Exercise, Lesson, Media, Unit
 from .exceptions import (
-    CourseNotFoundError,
     ExerciseNotFoundError,
     InvalidContentStateError,
     InvalidOrderError,
@@ -9,7 +8,6 @@ from .exceptions import (
     UnitNotFoundError,
 )
 from .repositories import (
-    CourseRepository,
     ExerciseRepository,
     LessonRepository,
     UnitRepository,
@@ -23,7 +21,6 @@ from .value_objects import (
 )
 
 __all__ = [
-    "Course",
     "Unit",
     "Lesson",
     "Exercise",
@@ -34,13 +31,11 @@ __all__ = [
     "ContentStatus",
     "MediaType",
     "LearningDomainError",
-    "CourseNotFoundError",
     "UnitNotFoundError",
     "LessonNotFoundError",
     "ExerciseNotFoundError",
     "InvalidContentStateError",
     "InvalidOrderError",
-    "CourseRepository",
     "UnitRepository",
     "LessonRepository",
     "ExerciseRepository",
