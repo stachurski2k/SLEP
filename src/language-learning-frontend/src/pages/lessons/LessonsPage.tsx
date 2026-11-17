@@ -46,18 +46,20 @@ export default function LessonsPage() {
     <section className="mx-auto w-full max-w-6xl py-2">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="m-0 text-3xl font-semibold tracking-tight text-white">Lekcje PJM</h2>
+          <h2 className="m-0 text-3xl font-semibold tracking-tight text-white">
+            Sign Language Lessons
+          </h2>
           <p className="mt-1 mb-0 text-sm text-[#a8b0c3]">
             {hasDynamicContent
-              ? `${units.length} modułów · ${totalDynamicLessons} lekcji do nauki`
-              : `${staticLessons.length} lekcji · ${staticLessons.reduce((total, lesson) => total + lesson.signs.length, 0)} gestów demonstracyjnych`}
+              ? `${units.length} units · ${totalDynamicLessons} lessons to practice`
+              : `${staticLessons.length} lessons · ${staticLessons.reduce((total, lesson) => total + lesson.signs.length, 0)} demo signs to practice`}
           </p>
         </div>
 
         {hasDynamicContent && (
           <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
             <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-            Baza modułów aktywna
+            Active Course Units
           </span>
         )}
       </div>
@@ -66,7 +68,7 @@ export default function LessonsPage() {
         <div className="flex min-h-[300px] items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <span className="size-10 animate-spin rounded-full border-4 border-emerald-400 border-t-transparent" />
-            <p className="text-sm text-[#a8b0c3]">Ładowanie modułów i lekcji...</p>
+            <p className="text-sm text-[#a8b0c3]">Loading units and lessons...</p>
           </div>
         </div>
       ) : hasDynamicContent ? (
@@ -76,20 +78,20 @@ export default function LessonsPage() {
               {/* Unit header */}
               <div className="flex items-center justify-between border-b border-slate-400/15 pb-2">
                 <div className="flex items-center gap-2.5">
-                  <span className="rounded-lg bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-300">
-                    Moduł {unit.order}
+                  <span className="rounded-lg bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-300">
+                    Unit {unit.order}
                   </span>
                   <h3 className="m-0 text-xl font-bold tracking-tight text-white">{unit.title}</h3>
                 </div>
                 <span className="text-xs font-medium text-[#738099]">
-                  {unit.lessons?.length || 0} {unit.lessons?.length === 1 ? 'lekcja' : 'lekcje'}
+                  {unit.lessons?.length || 0} {unit.lessons?.length === 1 ? 'lesson' : 'lessons'}
                 </span>
               </div>
 
               {/* Lessons grid in unit */}
               {(!unit.lessons || unit.lessons.length === 0) ? (
                 <div className={`${panelClass} p-4 text-center text-sm text-[#738099]`}>
-                  W tym module nie utworzono jeszcze lekcji.
+                  No lessons created in this unit yet.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -101,7 +103,7 @@ export default function LessonsPage() {
                       <div className="min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-semibold text-[#64d7bd]">
-                            Lekcja {lesson.order}
+                            Lesson {lesson.order}
                           </span>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[0.68rem] font-semibold tracking-wide uppercase ${
@@ -110,7 +112,7 @@ export default function LessonsPage() {
                                 : 'bg-amber-500/15 text-amber-300'
                             }`}
                           >
-                            {lesson.status === 'published' ? 'Opublikowana' : 'Szkic'}
+                            {lesson.status === 'published' ? 'Published' : 'Draft'}
                           </span>
                         </div>
                         <h4 className="mt-1.5 mb-0 text-lg font-semibold text-white">
@@ -128,9 +130,9 @@ export default function LessonsPage() {
                           type="button"
                           className={`${primaryButtonClass} w-full text-sm`}
                           onClick={() => navigate(getLessonPath(lesson.id))}
-                          aria-label={`Rozpocznij lekcję ${lesson.order}: ${lesson.title}`}
+                          aria-label={`Start lesson ${lesson.order}: ${lesson.title}`}
                         >
-                          Rozpocznij lekcję
+                          Start lesson
                         </button>
                       </div>
                     </article>
@@ -141,10 +143,10 @@ export default function LessonsPage() {
           ))}
         </div>
       ) : (
-        /* Fallback do demonstracyjnych lekcji jeśli baza jest pusta */
+        /* Fallback to demo lessons when database has no units */
         <div className="mt-6 sm:mt-8">
           <div className="mb-4 rounded-xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-xs text-sky-200">
-            ℹ️ Brak własnych modułów w bazie. Wyświetlane są podstawowe lekcje demonstracyjne.
+            ℹ️ No custom units found in database. Displaying standard demo lessons.
           </div>
           <div className="grid grid-cols-1 gap-4">
             {staticLessons.map((lesson) => (

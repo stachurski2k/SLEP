@@ -47,7 +47,7 @@ export async function getAvailablePoses(): Promise<AvailablePosesResponse> {
 export async function fetchUnits(): Promise<UnitEntity[]> {
   const response = await authenticatedFetch('/api/v1/units')
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się pobrać listy unitów.'))
+    throw new Error(await parseApiError(response, 'Failed to fetch units.'))
   }
   return response.json() as Promise<UnitEntity[]>
 }
@@ -55,7 +55,7 @@ export async function fetchUnits(): Promise<UnitEntity[]> {
 export async function fetchUnitDetails(unitId: string): Promise<UnitEntity> {
   const response = await authenticatedFetch(`/api/v1/units/${unitId}`)
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się pobrać szczegółów unitu.'))
+    throw new Error(await parseApiError(response, 'Failed to fetch unit details.'))
   }
   return response.json() as Promise<UnitEntity>
 }
@@ -67,7 +67,7 @@ export async function createUnit(data: UnitCreateInput): Promise<UnitEntity> {
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się utworzyć unitu.'))
+    throw new Error(await parseApiError(response, 'Failed to create unit.'))
   }
   return response.json() as Promise<UnitEntity>
 }
@@ -79,7 +79,7 @@ export async function updateUnit(unitId: string, data: UnitUpdateInput): Promise
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się zaktualizować unitu.'))
+    throw new Error(await parseApiError(response, 'Failed to update unit.'))
   }
   return response.json() as Promise<UnitEntity>
 }
@@ -89,14 +89,14 @@ export async function deleteUnit(unitId: string): Promise<void> {
     method: 'DELETE',
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się usunąć unitu.'))
+    throw new Error(await parseApiError(response, 'Failed to delete unit.'))
   }
 }
 
 export async function fetchLessonsByUnit(unitId: string): Promise<LessonEntity[]> {
   const response = await authenticatedFetch(`/api/v1/lessons/by-unit/${unitId}`)
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się pobrać lekcji.'))
+    throw new Error(await parseApiError(response, 'Failed to fetch lessons.'))
   }
   return response.json() as Promise<LessonEntity[]>
 }
@@ -104,7 +104,7 @@ export async function fetchLessonsByUnit(unitId: string): Promise<LessonEntity[]
 export async function fetchLessonDetails(lessonId: string): Promise<LessonEntity> {
   const response = await authenticatedFetch(`/api/v1/lessons/${lessonId}`)
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się pobrać szczegółów lekcji.'))
+    throw new Error(await parseApiError(response, 'Failed to fetch lesson details.'))
   }
   return response.json() as Promise<LessonEntity>
 }
@@ -116,7 +116,7 @@ export async function createLesson(unitId: string, data: LessonCreateInput): Pro
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się utworzyć lekcji.'))
+    throw new Error(await parseApiError(response, 'Failed to create lesson.'))
   }
   return response.json() as Promise<LessonEntity>
 }
@@ -131,7 +131,7 @@ export async function updateLesson(
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się zaktualizować lekcji.'))
+    throw new Error(await parseApiError(response, 'Failed to update lesson.'))
   }
   return response.json() as Promise<LessonEntity>
 }
@@ -141,7 +141,7 @@ export async function publishLesson(lessonId: string): Promise<LessonEntity> {
     method: 'POST',
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się opublikować lekcji.'))
+    throw new Error(await parseApiError(response, 'Failed to publish lesson.'))
   }
   return response.json() as Promise<LessonEntity>
 }
@@ -151,14 +151,14 @@ export async function deleteLesson(lessonId: string): Promise<void> {
     method: 'DELETE',
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się usunąć lekcji.'))
+    throw new Error(await parseApiError(response, 'Failed to delete lesson.'))
   }
 }
 
 export async function fetchExercisesByLesson(lessonId: string): Promise<ExerciseEntity[]> {
   const response = await authenticatedFetch(`/api/v1/exercises/by-lesson/${lessonId}/full`)
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się pobrać zadań dla lekcji.'))
+    throw new Error(await parseApiError(response, 'Failed to fetch exercises for lesson.'))
   }
   return response.json() as Promise<ExerciseEntity[]>
 }
@@ -173,7 +173,7 @@ export async function createExercise(
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się utworzyć zadania.'))
+    throw new Error(await parseApiError(response, 'Failed to create exercise.'))
   }
   return response.json() as Promise<ExerciseEntity>
 }
@@ -188,7 +188,7 @@ export async function updateExercise(
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się zaktualizować zadania.'))
+    throw new Error(await parseApiError(response, 'Failed to update exercise.'))
   }
   return response.json() as Promise<ExerciseEntity>
 }
@@ -198,7 +198,7 @@ export async function deleteExercise(exerciseId: string): Promise<void> {
     method: 'DELETE',
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się usunąć zadania.'))
+    throw new Error(await parseApiError(response, 'Failed to delete exercise.'))
   }
 }
 
@@ -212,7 +212,7 @@ export async function validateExerciseAnswer(
     body: JSON.stringify({ submittedAnswer }),
   })
   if (!response.ok) {
-    throw new Error(await parseApiError(response, 'Nie udało się zweryfikować odpowiedzi.'))
+    throw new Error(await parseApiError(response, 'Failed to validate answer.'))
   }
   return response.json() as Promise<ValidationResultResponse>
 }

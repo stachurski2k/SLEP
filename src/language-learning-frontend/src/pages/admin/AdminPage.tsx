@@ -18,6 +18,7 @@ import {
 } from '../../api/learning'
 import { inputClass, panelClass, primaryButtonClass } from '../../components/ui/classes'
 import { lessons as staticLessons } from '../../data/lessons'
+import { parseMediaUrl } from '../../utils/media'
 import type {
   AvailablePosesResponse,
   Difficulty,
@@ -73,7 +74,7 @@ export default function AdminPage() {
   const handleRefreshPoses = async () => {
     const res = await getAvailablePoses()
     setPosesInfo(res)
-    toast.success(`Zaktualizowano listę gestów: ${res.poses.length} gestów (${res.source}).`)
+    toast.success(`Updated gestures list: ${res.poses.length} gestures (${res.source}).`)
   }
 
   // Load lessons for a specific unit
@@ -91,7 +92,7 @@ export default function AdminPage() {
         setExercises([])
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Błąd ładowania lekcji.')
+      toast.error(err instanceof Error ? err.message : 'Failed to load lessons.')
     }
   }, [])
 
@@ -101,7 +102,7 @@ export default function AdminPage() {
       const data = await fetchExercisesByLesson(lessonId)
       setExercises(data)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Błąd ładowania zadań.')
+      toast.error(err instanceof Error ? err.message : 'Failed to load exercises.')
     }
   }, [])
 
@@ -111,9 +112,10 @@ export default function AdminPage() {
       const data = await fetchUnits()
       setUnits(data)
       if (data.length > 0) {
-        const targetUnitId = activeUnitId && data.some((u) => u.id === activeUnitId)
-          ? activeUnitId
-          : data[0].id
+        const targetUnitId =
+          activeUnitId && data.some((u) => u.id === activeUnitId)
+            ? activeUnitId
+            : data[0].id
         setActiveUnitId(targetUnitId)
         await loadLessons(targetUnitId)
       } else {
@@ -123,7 +125,7 @@ export default function AdminPage() {
         setExercises([])
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Błąd ładowania unitów.')
+      toast.error(err instanceof Error ? err.message : 'Failed to load units.')
     } finally {
       setIsLoading(false)
     }
@@ -156,7 +158,7 @@ export default function AdminPage() {
           }
         }
       } catch (err) {
-        if (isMounted) toast.error(err instanceof Error ? err.message : 'Błąd inicjalizacji danych.')
+        if (isMounted) toast.error(err instanceof Error ? err.message : 'Failed to initialize data.')
       } finally {
         if (isMounted) setIsLoading(false)
       }
@@ -190,7 +192,7 @@ export default function AdminPage() {
     try {
       setIsLoading(true)
       const newUnit = await createUnit({
-        title: 'Jednostka 1: Podstawy języka migowego',
+        title: 'Unit 1: Sign Language Fundamentals',
         order: 1,
       })
 
@@ -198,7 +200,7 @@ export default function AdminPage() {
         const item = staticLessons[i]
         const createdLesson = await createLesson(newUnit.id, {
           title: item.title,
-          description: `Ćwiczenie gestów: ${item.signs.join(', ')}`,
+          description: `Practice signs: ${item.signs.join(', ')}`,
           order: i + 1,
         })
         await publishLesson(createdLesson.id)
@@ -208,17 +210,17 @@ export default function AdminPage() {
             type: 'single',
             difficulty: 'beginner',
             points: 10,
-            content: `Wykonaj znak dla: ${sign}`,
+            content: `Show the sign for: ${sign}`,
             answer: sign,
           })
         }
       }
 
-      toast.success('Pomyślnie zainicjalizowano unity i lekcje z bazy lessons.ts!')
+      toast.success('Successfully initialized units and lessons from lessons.ts!')
       await loadUnits()
       setActiveUnitId(newUnit.id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Błąd importowania danych.')
+      toast.error(err instanceof Error ? err.message : 'Data import failed.')
     } finally {
       setIsLoading(false)
     }
@@ -240,37 +242,37 @@ export default function AdminPage() {
   const handleSaveUnit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!unitForm.title.trim()) {
-      toast.error('Tytuł unitu jest wymagany.')
+      toast.error('Unit title is required.')
       return
     }
 
     try {
       if (editingUnitId) {
         await updateUnit(editingUnitId, unitForm)
-        toast.success('Zaktualizowano unit.')
+        toast.success('Unit updated.')
       } else {
         const created = await createUnit(unitForm)
-        toast.success('Utworzono nowy unit.')
+        toast.success('New unit created.')
         setActiveUnitId(created.id)
       }
       setShowUnitModal(false)
       await loadUnits()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Wystąpił błąd zapisu unitu.')
+      toast.error(err instanceof Error ? err.message : 'Failed to save unit.')
     }
   }
 
   const handleDeleteUnit = async (unitId: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć ten unit wraz ze wszystkimi jego lekcjami?')) return
+    if (!confirm('Are you sure you want to delete this unit along with all its lessons?')) return
     try {
       await deleteUnit(unitId)
-      toast.success('Unit został usunięty.')
+      toast.success('Unit deleted.')
       if (activeUnitId === unitId) {
         setActiveUnitId(null)
       }
       await loadUnits()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Błąd podczas usuwania unitu.')
+      toast.error(err instanceof Error ? err.message : 'Failed to delete unit.')
     }
   }
 
@@ -296,47 +298,47 @@ export default function AdminPage() {
     e.preventDefault()
     if (!activeUnitId) return
     if (!lessonForm.title.trim()) {
-      toast.error('Tytuł lekcji jest wymagany.')
+      toast.error('Lesson title is required.')
       return
     }
 
     try {
       if (editingLessonId) {
         await updateLesson(editingLessonId, lessonForm)
-        toast.success('Zaktualizowano lekcję.')
+        toast.success('Lesson updated.')
       } else {
         const created = await createLesson(activeUnitId, lessonForm)
-        toast.success('Utworzono nową lekcję.')
+        toast.success('New lesson created.')
         setActiveLessonId(created.id)
       }
       setShowLessonModal(false)
       await loadLessons(activeUnitId)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Wystąpił błąd zapisu lekcji.')
+      toast.error(err instanceof Error ? err.message : 'Failed to save lesson.')
     }
   }
 
   const handlePublishLesson = async (lessonId: string) => {
     try {
       await publishLesson(lessonId)
-      toast.success('Lekcja została opublikowana!')
+      toast.success('Lesson published!')
       if (activeUnitId) await loadLessons(activeUnitId)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Błąd podczas publikacji lekcji.')
+      toast.error(err instanceof Error ? err.message : 'Failed to publish lesson.')
     }
   }
 
   const handleDeleteLesson = async (lessonId: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć tę lekcję i jej zadania?')) return
+    if (!confirm('Are you sure you want to delete this lesson and its exercises?')) return
     try {
       await deleteLesson(lessonId)
-      toast.success('Lekcja została usunięta.')
+      toast.success('Lesson deleted.')
       if (activeLessonId === lessonId) {
         setActiveLessonId(null)
       }
       if (activeUnitId) await loadLessons(activeUnitId)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Błąd podczas usuwania lekcji.')
+      toast.error(err instanceof Error ? err.message : 'Failed to delete lesson.')
     }
   }
 
@@ -349,7 +351,7 @@ export default function AdminPage() {
       type: 'single',
       difficulty: 'beginner',
       points: 10,
-      content: `Wykonaj znak dla: ${defaultPose}`,
+      content: `Show the sign for: ${defaultPose}`,
       answer: defaultPose,
       media: [],
     })
@@ -374,8 +376,10 @@ export default function AdminPage() {
       ...prev,
       answer: selectedPose,
       content:
-        prev.content.startsWith('Wykonaj znak dla:') || !prev.content
-          ? `Wykonaj znak dla: ${selectedPose}`
+        prev.content.startsWith('Show the sign for:') ||
+        prev.content.startsWith('Wykonaj znak dla:') ||
+        !prev.content
+          ? `Show the sign for: ${selectedPose}`
           : prev.content,
     }))
   }
@@ -406,11 +410,11 @@ export default function AdminPage() {
     e.preventDefault()
     if (!activeLessonId) return
     if (!exerciseForm.answer.trim()) {
-      toast.error('Docelowy gest (odpowiedź) jest wymagany.')
+      toast.error('Target sign (answer) is required.')
       return
     }
     if (!exerciseForm.content.trim()) {
-      toast.error('Treść zadania jest wymagana.')
+      toast.error('Exercise prompt content is required.')
       return
     }
 
@@ -428,7 +432,7 @@ export default function AdminPage() {
           answer: exerciseForm.answer.trim().toUpperCase(),
           media: cleanMedia,
         })
-        toast.success('Zaktualizowano zadanie.')
+        toast.success('Exercise updated.')
       } else {
         await createExercise(activeLessonId, {
           type: exerciseForm.type,
@@ -438,23 +442,23 @@ export default function AdminPage() {
           answer: exerciseForm.answer.trim().toUpperCase(),
           media: cleanMedia,
         })
-        toast.success('Utworzono zadanie.')
+        toast.success('Exercise created.')
       }
       setShowExerciseModal(false)
       await loadExercises(activeLessonId)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Wystąpił błąd zapisu zadania.')
+      toast.error(err instanceof Error ? err.message : 'Failed to save exercise.')
     }
   }
 
   const handleDeleteExercise = async (exerciseId: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć to zadanie?')) return
+    if (!confirm('Are you sure you want to delete this exercise?')) return
     try {
       await deleteExercise(exerciseId)
-      toast.success('Zadanie zostało usunięte.')
+      toast.success('Exercise deleted.')
       if (activeLessonId) await loadExercises(activeLessonId)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Błąd podczas usuwania zadania.')
+      toast.error(err instanceof Error ? err.message : 'Failed to delete exercise.')
     }
   }
 
@@ -470,10 +474,10 @@ export default function AdminPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="m-0 text-3xl font-semibold tracking-tight text-white">
-            Panel Administratora · Zarządzanie Kursem
+            Admin Panel · Course Management
           </h2>
           <p className="mt-1 mb-0 text-sm text-[#a8b0c3]">
-            Twórz i konfiguruj unity, lekcje oraz interaktywne zadania bazujące na gestach modelu.
+            Create and configure units, lessons, and interactive exercises based on model gestures.
           </p>
         </div>
 
@@ -487,7 +491,7 @@ export default function AdminPage() {
                 ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
                 : 'border-sky-400/30 bg-sky-500/10 text-sky-300'
             }`}
-            title="Kliknij, aby przejrzeć dostępne gesty"
+            title="Click to view all available gestures"
           >
             <span
               className={`size-2 rounded-full ${
@@ -495,8 +499,8 @@ export default function AdminPage() {
               }`}
             />
             <span>
-              {posesInfo.source === 'model-service' ? 'Model Service (live)' : 'Baza z lessons.ts'} ·{' '}
-              {posesInfo.poses.length} gestów
+              {posesInfo.source === 'model-service' ? 'Model Service (live)' : 'lessons.ts database'} ·{' '}
+              {posesInfo.poses.length} gestures
             </span>
             <span className="text-white/40">👁</span>
           </button>
@@ -507,7 +511,7 @@ export default function AdminPage() {
               onClick={() => void handleSeedFromLessons()}
               className="cursor-pointer rounded-xl border border-emerald-400/30 bg-emerald-400/15 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/25"
             >
-              ⚡ Zaimportuj dane z lessons.ts
+              ⚡ Import data from lessons.ts
             </button>
           )}
 
@@ -516,36 +520,36 @@ export default function AdminPage() {
             onClick={handleOpenCreateUnit}
             className={`${primaryButtonClass} !min-h-10 text-sm`}
           >
-            + Nowy Unit
+            + New Unit
           </button>
         </div>
       </div>
 
       {isLoading ? (
         <div className="mt-12 flex justify-center text-slate-400">
-          Ładowanie struktury kursu...
+          Loading course structure...
         </div>
       ) : (
         /* 3-Column Manager Layout */
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* Column 1: Unity (Units) - 3 cols */}
+          {/* Column 1: Units - 3 cols */}
           <div className="flex flex-col gap-3 lg:col-span-3">
             <div className="flex items-center justify-between">
               <h3 className="m-0 text-base font-semibold text-white">
-                1. Unity ({units.length})
+                1. Units ({units.length})
               </h3>
               <button
                 type="button"
                 onClick={handleOpenCreateUnit}
-                className="text-xs text-emerald-400 hover:underline"
+                className="cursor-pointer text-xs text-emerald-400 hover:underline"
               >
-                + Dodaj
+                + Add Unit
               </button>
             </div>
 
             {units.length === 0 ? (
               <div className={`${panelClass} p-5 text-center text-sm text-[#738099]`}>
-                Brak unitów. Kliknij &quot;+ Nowy Unit&quot; lub zaimportuj dane demonstracyjne.
+                No units found. Click &quot;+ New Unit&quot; or import demo data.
               </div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -577,7 +581,7 @@ export default function AdminPage() {
                             handleOpenEditUnit(unit)
                           }}
                           className="rounded p-1 text-xs text-slate-400 hover:bg-white/10 hover:text-white"
-                          title="Edytuj unit"
+                          title="Edit unit"
                         >
                           ✎
                         </button>
@@ -588,7 +592,7 @@ export default function AdminPage() {
                             void handleDeleteUnit(unit.id)
                           }}
                           className="rounded p-1 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
-                          title="Usuń unit"
+                          title="Delete unit"
                         >
                           ✕
                         </button>
@@ -600,30 +604,30 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/* Column 2: Lekcje (Lessons) - 4 cols */}
+          {/* Column 2: Lessons - 4 cols */}
           <div className="flex flex-col gap-3 lg:col-span-4">
             <div className="flex items-center justify-between">
               <h3 className="m-0 text-base font-semibold text-white">
-                2. Lekcje {activeUnit ? `w: ${activeUnit.title}` : ''} ({lessons.length})
+                2. Lessons {activeUnit ? `in: ${activeUnit.title}` : ''} ({lessons.length})
               </h3>
               {activeUnit && (
                 <button
                   type="button"
                   onClick={handleOpenCreateLesson}
-                  className="text-xs text-emerald-400 hover:underline"
+                  className="cursor-pointer text-xs text-emerald-400 hover:underline"
                 >
-                  + Dodaj lekcję
+                  + Add Lesson
                 </button>
               )}
             </div>
 
             {!activeUnit ? (
               <div className={`${panelClass} p-5 text-center text-sm text-[#738099]`}>
-                Wybierz unit z lewej strony, aby zarządzać jego lekcjami.
+                Select a unit on the left to manage its lessons.
               </div>
             ) : lessons.length === 0 ? (
               <div className={`${panelClass} p-5 text-center text-sm text-[#738099]`}>
-                Brak lekcji w tym unicie. Kliknij &quot;+ Dodaj lekcję&quot;.
+                No lessons in this unit yet. Click &quot;+ Add Lesson&quot;.
               </div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -644,7 +648,7 @@ export default function AdminPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-[0.68rem] font-bold text-[#64d7bd] uppercase">
-                              Lekcja #{lesson.order}
+                              Lesson #{lesson.order}
                             </span>
                             <span
                               className={`rounded px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wider ${
@@ -653,7 +657,7 @@ export default function AdminPage() {
                                   : 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
                               }`}
                             >
-                              {lesson.status}
+                              {isPublished ? 'Published' : 'Draft'}
                             </span>
                           </div>
                           <h4 className="mt-1 mb-0 text-sm font-semibold text-white">
@@ -669,10 +673,10 @@ export default function AdminPage() {
                                 e.stopPropagation()
                                 void handlePublishLesson(lesson.id)
                               }}
-                              className="rounded bg-emerald-500/20 px-2 py-0.5 text-[0.68rem] font-semibold text-emerald-300 hover:bg-emerald-500/30"
-                              title="Publikuj lekcję dla użytkowników"
+                              className="cursor-pointer rounded bg-emerald-500/20 px-2 py-0.5 text-[0.68rem] font-semibold text-emerald-300 hover:bg-emerald-500/30"
+                              title="Publish lesson for all learners"
                             >
-                              Publikuj
+                              Publish
                             </button>
                           )}
                           <button
@@ -682,7 +686,7 @@ export default function AdminPage() {
                               handleOpenEditLesson(lesson)
                             }}
                             className="rounded p-1 text-xs text-slate-400 hover:bg-white/10 hover:text-white"
-                            title="Edytuj lekcję"
+                            title="Edit lesson"
                           >
                             ✎
                           </button>
@@ -693,7 +697,7 @@ export default function AdminPage() {
                               void handleDeleteLesson(lesson.id)
                             }}
                             className="rounded p-1 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
-                            title="Usuń lekcję"
+                            title="Delete lesson"
                           >
                             ✕
                           </button>
@@ -712,31 +716,31 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/* Column 3: Zadania (Exercises) - 5 cols */}
+          {/* Column 3: Exercises - 5 cols */}
           <div className="flex flex-col gap-3 lg:col-span-5">
             <div className="flex items-center justify-between">
               <h3 className="m-0 text-base font-semibold text-white">
-                3. Zadania {activeLesson ? `w: ${activeLesson.title}` : ''} ({exercises.length})
+                3. Exercises {activeLesson ? `in: ${activeLesson.title}` : ''} ({exercises.length})
               </h3>
               {activeLesson && (
                 <button
                   type="button"
                   onClick={handleOpenCreateExercise}
-                  className="text-xs text-emerald-400 hover:underline"
+                  className="cursor-pointer text-xs text-emerald-400 hover:underline"
                 >
-                  + Dodaj zadanie
+                  + Add Exercise
                 </button>
               )}
             </div>
 
             {!activeLesson ? (
               <div className={`${panelClass} p-5 text-center text-sm text-[#738099]`}>
-                Wybierz lekcję, aby przeglądać lub dodawać do niej zadania gestów.
+                Select a lesson to view or create gesture exercises.
               </div>
             ) : exercises.length === 0 ? (
               <div className={`${panelClass} p-5 text-center text-sm text-[#738099]`}>
-                Ta lekcja nie ma jeszcze żadnych zadań. Kliknij &quot;+ Dodaj zadanie&quot;, aby
-                stworzyć ćwiczenie rozpoznawania znaku.
+                This lesson does not have any exercises yet. Click &quot;+ Add Exercise&quot; to
+                create a sign recognition task.
               </div>
             ) : (
               <div className="flex flex-col gap-2.5">
@@ -749,13 +753,13 @@ export default function AdminPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-bold text-slate-400">#{index + 1}</span>
                         <span className="rounded-md border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold tracking-wider text-emerald-300">
-                          GEST: {exercise.answer}
+                          SIGN: {exercise.answer}
                         </span>
                         <span className="rounded-md border border-slate-400/20 bg-slate-400/10 px-2 py-0.5 text-[0.68rem] text-[#a8b0c3]">
                           {exercise.difficulty}
                         </span>
                         <span className="rounded-md border border-slate-400/20 bg-slate-400/10 px-2 py-0.5 text-[0.68rem] text-[#a8b0c3]">
-                          {exercise.points} pkt
+                          {exercise.points} pts
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
@@ -763,7 +767,7 @@ export default function AdminPage() {
                           type="button"
                           onClick={() => handleOpenEditExercise(exercise)}
                           className="rounded p-1 text-xs text-slate-400 hover:bg-white/10 hover:text-white"
-                          title="Edytuj zadanie"
+                          title="Edit exercise"
                         >
                           ✎
                         </button>
@@ -771,7 +775,7 @@ export default function AdminPage() {
                           type="button"
                           onClick={() => void handleDeleteExercise(exercise.id)}
                           className="rounded p-1 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
-                          title="Usuń zadanie"
+                          title="Delete exercise"
                         >
                           ✕
                         </button>
@@ -789,10 +793,12 @@ export default function AdminPage() {
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 rounded-md border border-slate-700/60 bg-black/40 px-2 py-0.5 text-[0.7rem] text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300"
-                            title={`Otwórz materiał: ${m.url}`}
+                            title={`Open media: ${m.url}`}
                           >
                             <span>{m.type === 'video' ? '🎥' : '🖼️'}</span>
-                            <span className="max-w-[130px] truncate">{m.type}: {m.url.split('/').pop() || 'link'}</span>
+                            <span className="max-w-[130px] truncate">
+                              {m.type}: {m.url.split('/').pop() || 'link'}
+                            </span>
                           </a>
                         ))}
                       </div>
@@ -805,21 +811,21 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODAL: Podgląd Dostępnych Póz */}
+      {/* MODAL: Available Gestures & Poses Preview */}
       {showPosesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className={`${panelClass} max-h-[85vh] w-full max-w-2xl overflow-hidden p-6`}>
             <div className="flex items-center justify-between border-b border-slate-400/15 pb-4">
               <div>
-                <h3 className="m-0 text-xl font-bold text-white">Dostępne gesty i pozy</h3>
+                <h3 className="m-0 text-xl font-bold text-white">Available Gestures & Poses</h3>
                 <p className="mt-1 mb-0 text-xs text-[#a8b0c3]">
-                  Źródło:{' '}
+                  Source:{' '}
                   <span className="font-semibold text-emerald-400">
                     {posesInfo.source === 'model-service'
                       ? 'Model Service API'
-                      : 'Lokalne definicje lessons.ts'}
+                      : 'Local lessons.ts definitions'}
                   </span>{' '}
-                  · Łącznie {posesInfo.poses.length} gestów
+                  · Total {posesInfo.poses.length} gestures
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -828,7 +834,7 @@ export default function AdminPage() {
                   onClick={() => void handleRefreshPoses()}
                   className="cursor-pointer rounded-lg border border-slate-400/20 bg-slate-400/10 px-2.5 py-1 text-xs text-slate-300 transition hover:bg-slate-400/20 hover:text-white"
                 >
-                  ↻ Odśwież
+                  ↻ Refresh
                 </button>
                 <button
                   type="button"
@@ -843,7 +849,7 @@ export default function AdminPage() {
             <div className="mt-4">
               <input
                 type="text"
-                placeholder="Szukaj gestu (np. YES, NO, MORNING)..."
+                placeholder="Search gesture (e.g. YES, NO, MORNING)..."
                 value={posesSearch}
                 onChange={(e) => setPosesSearch(e.target.value)}
                 className={`${inputClass} w-full`}
@@ -869,27 +875,27 @@ export default function AdminPage() {
                 onClick={() => setShowPosesModal(false)}
                 className="cursor-pointer rounded-xl border border-slate-400/20 bg-slate-400/10 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-400/20"
               >
-                Zamknij
+                Close
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: Tworzenie / Edycja Unitu */}
+      {/* MODAL: Create / Edit Unit */}
       {showUnitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className={`${panelClass} w-full max-w-md p-6`}>
             <h3 className="m-0 text-xl font-bold text-white">
-              {editingUnitId ? 'Edytuj Unit' : 'Nowy Unit'}
+              {editingUnitId ? 'Edit Unit' : 'New Unit'}
             </h3>
             <form onSubmit={(e) => void handleSaveUnit(e)} className="mt-5 flex flex-col gap-4">
               <div>
-                <label className="text-xs font-semibold text-[#a8b0c3]">Tytuł unitu</label>
+                <label className="text-xs font-semibold text-[#a8b0c3]">Unit title</label>
                 <input
                   type="text"
                   required
-                  placeholder="np. Podstawowe gesty powitalne"
+                  placeholder="e.g. Basic Greeting Signs"
                   value={unitForm.title}
                   onChange={(e) => setUnitForm({ ...unitForm, title: e.target.value })}
                   className={`${inputClass} mt-1 w-full`}
@@ -897,7 +903,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#a8b0c3]">Kolejność (Order)</label>
+                <label className="text-xs font-semibold text-[#a8b0c3]">Order</label>
                 <input
                   type="number"
                   min="1"
@@ -916,10 +922,10 @@ export default function AdminPage() {
                   onClick={() => setShowUnitModal(false)}
                   className="cursor-pointer rounded-xl border border-slate-400/20 px-4 py-2.5 text-sm font-medium text-slate-300 hover:text-white"
                 >
-                  Anuluj
+                  Cancel
                 </button>
                 <button type="submit" className={`${primaryButtonClass} !min-h-10 text-sm`}>
-                  Zapisz Unit
+                  Save Unit
                 </button>
               </div>
             </form>
@@ -927,21 +933,21 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODAL: Tworzenie / Edycja Lekcji */}
+      {/* MODAL: Create / Edit Lesson */}
       {showLessonModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className={`${panelClass} w-full max-w-md p-6`}>
             <h3 className="m-0 text-xl font-bold text-white">
-              {editingLessonId ? 'Edytuj Lekcję' : 'Nowa Lekcja'}
+              {editingLessonId ? 'Edit Lesson' : 'New Lesson'}
             </h3>
             <p className="mt-1 text-xs text-emerald-400">Unit: {activeUnit?.title}</p>
             <form onSubmit={(e) => void handleSaveLesson(e)} className="mt-5 flex flex-col gap-4">
               <div>
-                <label className="text-xs font-semibold text-[#a8b0c3]">Tytuł lekcji</label>
+                <label className="text-xs font-semibold text-[#a8b0c3]">Lesson title</label>
                 <input
                   type="text"
                   required
-                  placeholder="np. Powitania i zwroty grzecznościowe"
+                  placeholder="e.g. Greetings and Polite Phrases"
                   value={lessonForm.title}
                   onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
                   className={`${inputClass} mt-1 w-full`}
@@ -949,10 +955,10 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#a8b0c3]">Opis lekcji</label>
+                <label className="text-xs font-semibold text-[#a8b0c3]">Lesson description</label>
                 <textarea
                   rows={3}
-                  placeholder="Krótki opis czego użytkownik się nauczy..."
+                  placeholder="Short description of what learners will practice..."
                   value={lessonForm.description}
                   onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
                   className={`${inputClass} mt-1 w-full`}
@@ -960,7 +966,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#a8b0c3]">Kolejność (Order)</label>
+                <label className="text-xs font-semibold text-[#a8b0c3]">Order</label>
                 <input
                   type="number"
                   min="1"
@@ -979,10 +985,10 @@ export default function AdminPage() {
                   onClick={() => setShowLessonModal(false)}
                   className="cursor-pointer rounded-xl border border-slate-400/20 px-4 py-2.5 text-sm font-medium text-slate-300 hover:text-white"
                 >
-                  Anuluj
+                  Cancel
                 </button>
                 <button type="submit" className={`${primaryButtonClass} !min-h-10 text-sm`}>
-                  Zapisz Lekcję
+                  Save Lesson
                 </button>
               </div>
             </form>
@@ -990,31 +996,31 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODAL: Tworzenie / Edycja Zadania (Exercise) */}
+      {/* MODAL: Create / Edit Exercise */}
       {showExerciseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className={`${panelClass} max-h-[90vh] w-full max-w-lg overflow-y-auto p-6`}>
             <h3 className="m-0 text-xl font-bold text-white">
-              {editingExerciseId ? 'Edytuj Zadanie w Lekcji' : 'Nowe Zadanie w Lekcji'}
+              {editingExerciseId ? 'Edit Exercise' : 'New Exercise'}
             </h3>
-            <p className="mt-1 text-xs text-emerald-400">Lekcja: {activeLesson?.title}</p>
+            <p className="mt-1 text-xs text-emerald-400">Lesson: {activeLesson?.title}</p>
 
             <form
               onSubmit={(e) => void handleSaveExercise(e)}
               className="mt-5 flex flex-col gap-4"
             >
-              {/* Wybór pozy docelowej (Answer) */}
+              {/* Target pose selection (Answer) */}
               <div>
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-[#a8b0c3]">
-                    Oczekiwany gest / poza (Answer) *
+                    Target sign / gesture (Answer) *
                   </label>
                   <span className="text-[0.7rem] text-slate-400">
-                    Źródło: {posesInfo.source}
+                    Source: {posesInfo.source}
                   </span>
                 </div>
 
-                {/* Dropdown z dostępnych póz */}
+                {/* Dropdown of available poses */}
                 <select
                   value={exerciseForm.answer}
                   onChange={(e) => handlePoseSelect(e.target.value)}
@@ -1028,27 +1034,27 @@ export default function AdminPage() {
                 </select>
 
                 <p className="mt-1 text-[0.72rem] text-slate-400">
-                  Możesz też wpisać niestandardowy gest w polu poniżej:
+                  You can also type a custom sign in the field below:
                 </p>
                 <input
                   type="text"
                   required
-                  placeholder="np. YES, SMILE, MAN"
+                  placeholder="e.g. YES, SMILE, MAN"
                   value={exerciseForm.answer}
                   onChange={(e) => handlePoseSelect(e.target.value.toUpperCase())}
                   className={`${inputClass} mt-1 w-full`}
                 />
               </div>
 
-              {/* Treść polecenia (Content) */}
+              {/* Prompt instruction for learner */}
               <div>
                 <label className="text-xs font-semibold text-[#a8b0c3]">
-                  Treść polecenia dla ucznia *
+                  Prompt instruction for learner *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="np. Wykonaj znak dla: YES"
+                  placeholder="e.g. Show the sign for: YES"
                   value={exerciseForm.content}
                   onChange={(e) => setExerciseForm({ ...exerciseForm, content: e.target.value })}
                   className={`${inputClass} mt-1 w-full`}
@@ -1057,7 +1063,7 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-[#a8b0c3]">Typ zadania</label>
+                  <label className="text-xs font-semibold text-[#a8b0c3]">Exercise type</label>
                   <select
                     value={exerciseForm.type}
                     onChange={(e) =>
@@ -1068,13 +1074,13 @@ export default function AdminPage() {
                     }
                     className={`${inputClass} mt-1 w-full bg-[#0d1420] text-white`}
                   >
-                    <option value="single">Single (pojedynczy gest)</option>
-                    <option value="sentence">Sentence (sekwencja)</option>
+                    <option value="single">Single (single gesture)</option>
+                    <option value="sentence">Sentence (sequence)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#a8b0c3]">Trudność</label>
+                  <label className="text-xs font-semibold text-[#a8b0c3]">Difficulty</label>
                   <select
                     value={exerciseForm.difficulty}
                     onChange={(e) =>
@@ -1085,15 +1091,15 @@ export default function AdminPage() {
                     }
                     className={`${inputClass} mt-1 w-full bg-[#0d1420] text-white`}
                   >
-                    <option value="beginner">Beginner (początkujący)</option>
-                    <option value="intermediate">Intermediate (średni)</option>
-                    <option value="advanced">Advanced (zaawansowany)</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#a8b0c3]">Punkty za wykonanie</label>
+                <label className="text-xs font-semibold text-[#a8b0c3]">Reward points</label>
                 <input
                   type="number"
                   min="1"
@@ -1110,15 +1116,15 @@ export default function AdminPage() {
                 />
               </div>
 
-              {/* Materiały pomocnicze (Zdjęcia / Wideo) */}
+              {/* Auxiliary reference media (Photos / Videos) */}
               <div className="rounded-xl border border-slate-400/20 bg-slate-900/50 p-3.5">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-xs font-semibold text-white">
-                      Materiały pomocnicze (Media)
+                      Auxiliary Media (Photos / Videos)
                     </span>
                     <p className="mt-0.5 mb-0 text-[0.72rem] text-[#a8b0c3]">
-                      Przypnij zdjęcia lub nagrania wideo jako materiały referencyjne.
+                      Attach reference photos or video clips for learners.
                     </p>
                   </div>
                   <div className="flex gap-1.5">
@@ -1127,78 +1133,89 @@ export default function AdminPage() {
                       onClick={() => handleAddMedia('image')}
                       className="cursor-pointer rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-300 transition hover:bg-sky-500/20"
                     >
-                      + Zdjęcie
+                      + Image
                     </button>
                     <button
                       type="button"
                       onClick={() => handleAddMedia('video')}
                       className="cursor-pointer rounded-lg border border-purple-400/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-300 transition hover:bg-purple-500/20"
                     >
-                      + Wideo
+                      + Video
                     </button>
                   </div>
                 </div>
 
                 {(!exerciseForm.media || exerciseForm.media.length === 0) ? (
                   <p className="mt-3 mb-1 text-center text-xs text-[#738099]">
-                    Brak załączonych materiałów pomocniczych. Kliknij powyżej, aby dodać link.
+                    No auxiliary media attached. Click above to add a media link.
                   </p>
                 ) : (
                   <div className="mt-3 flex flex-col gap-2.5">
-                    {exerciseForm.media.map((m, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-lg border border-slate-400/15 bg-white/5 p-2.5"
-                      >
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={m.type}
-                            onChange={(e) => handleUpdateMedia(idx, 'type', e.target.value)}
-                            className="rounded-lg border border-slate-400/20 bg-[#0d1420] px-2 py-1.5 text-xs text-white"
-                          >
-                            <option value="image">Zdjęcie</option>
-                            <option value="video">Wideo</option>
-                          </select>
-                          <input
-                            type="url"
-                            placeholder="Wklej URL zdjęcia lub wideo (https://...)"
-                            value={m.url}
-                            onChange={(e) => handleUpdateMedia(idx, 'url', e.target.value)}
-                            className="flex-1 rounded-lg border border-slate-400/20 bg-[#0d1420] px-2.5 py-1.5 text-xs text-white placeholder-slate-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveMedia(idx)}
-                            className="rounded-lg p-1.5 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
-                            title="Usuń materiał"
-                          >
-                            ✕
-                          </button>
-                        </div>
-
-                        {/* Podgląd live jeśli podano URL */}
-                        {m.url.trim().length > 8 && (
-                          <div className="mt-2 overflow-hidden rounded-md border border-slate-700/50 bg-black/40 p-1.5 text-center">
-                            {m.type === 'image' ? (
-                              <img
-                                src={m.url}
-                                alt={`Podgląd ${idx + 1}`}
-                                className="mx-auto max-h-32 rounded object-contain"
-                                onError={(e) => {
-                                  ;(e.target as HTMLElement).style.display = 'none'
-                                }}
-                              />
-                            ) : (
-                              <video
-                                src={m.url}
-                                controls
-                                className="mx-auto max-h-32 rounded"
-                              />
-                            )}
+                    {exerciseForm.media.map((m, idx) => {
+                      const parsed = parseMediaUrl(m.url)
+                      return (
+                        <div
+                          key={idx}
+                          className="rounded-lg border border-slate-400/15 bg-white/5 p-2.5"
+                        >
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={m.type}
+                              onChange={(e) => handleUpdateMedia(idx, 'type', e.target.value)}
+                              className="rounded-lg border border-slate-400/20 bg-[#0d1420] px-2 py-1.5 text-xs text-white"
+                            >
+                              <option value="image">Image</option>
+                              <option value="video">Video</option>
+                            </select>
+                            <input
+                              type="url"
+                              placeholder="Paste image or video URL (https://... or YouTube)"
+                              value={m.url}
+                              onChange={(e) => handleUpdateMedia(idx, 'url', e.target.value)}
+                              className="flex-1 rounded-lg border border-slate-400/20 bg-[#0d1420] px-2.5 py-1.5 text-xs text-white placeholder-slate-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMedia(idx)}
+                              className="cursor-pointer rounded-lg p-1.5 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300"
+                              title="Delete media"
+                            >
+                              ✕
+                            </button>
                           </div>
-                        )}
-                      </div>
-                    ))}
+
+                          {/* Live preview */}
+                          {m.url.trim().length > 8 && (
+                            <div className="mt-2 overflow-hidden rounded-md border border-slate-700/50 bg-black/40 p-1.5 text-center">
+                              {parsed.isYouTube || parsed.isVimeo ? (
+                                <iframe
+                                  src={parsed.embedUrl}
+                                  title={`Preview ${idx + 1}`}
+                                  className="mx-auto aspect-video max-h-36 w-full rounded border-0"
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              ) : m.type === 'image' || parsed.isImage ? (
+                                <img
+                                  src={m.url}
+                                  alt={`Preview ${idx + 1}`}
+                                  className="mx-auto max-h-32 rounded object-contain"
+                                  onError={(e) => {
+                                    ;(e.target as HTMLElement).style.display = 'none'
+                                  }}
+                                />
+                              ) : (
+                                <video
+                                  src={m.url}
+                                  controls
+                                  className="mx-auto max-h-32 rounded"
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -1209,10 +1226,10 @@ export default function AdminPage() {
                   onClick={() => setShowExerciseModal(false)}
                   className="cursor-pointer rounded-xl border border-slate-400/20 px-4 py-2.5 text-sm font-medium text-slate-300 hover:text-white"
                 >
-                  Anuluj
+                  Cancel
                 </button>
                 <button type="submit" className={`${primaryButtonClass} !min-h-10 text-sm`}>
-                  {editingExerciseId ? 'Zaktualizuj Zadanie' : 'Zapisz Zadanie'}
+                  {editingExerciseId ? 'Update Exercise' : 'Save Exercise'}
                 </button>
               </div>
             </form>
