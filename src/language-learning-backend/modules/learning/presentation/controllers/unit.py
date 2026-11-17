@@ -32,12 +32,12 @@ async def create_unit(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@unit_router.get("", response_model=list[UnitResponse])
+@unit_router.get("", response_model=list[UnitDetailsResponse])
 async def list_units(
     service: UnitApplicationService = Depends(get_unit_service),
-) -> list[UnitResponse]:
+) -> list[UnitDetailsResponse]:
     units = await service.listUnits()
-    return [UnitResponse.model_validate(u) for u in units]
+    return [UnitDetailsResponse.model_validate(u) for u in units]
 
 
 @unit_router.get("/{unit_id}", response_model=UnitDetailsResponse)

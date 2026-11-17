@@ -56,6 +56,15 @@ async def get_exercises_by_lesson(
     return [ExercisePublicResponse.model_validate(e) for e in exercises]
 
 
+@exercise_router.get("/by-lesson/{lesson_id}/full", response_model=list[ExerciseResponse])
+async def get_exercises_by_lesson_full(
+    lesson_id: UUID,
+    service: ExerciseApplicationService = Depends(get_exercise_service),
+) -> list[ExerciseResponse]:
+    exercises = await service.getExercisesByLessonFull(lesson_id)
+    return [ExerciseResponse.model_validate(e) for e in exercises]
+
+
 @exercise_router.get("/{exercise_id}", response_model=ExercisePublicResponse)
 async def get_exercise_public(
     exercise_id: UUID,

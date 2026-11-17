@@ -135,6 +135,13 @@ def health(request: Request) -> HealthResponse:
     )
 
 
+@app.get("/api/v1/classes", response_model=list[str])
+@app.get("/api/v1/poses", response_model=list[str])
+def list_classes(request: Request) -> list[str]:
+    inference_service = get_inference_service(request)
+    return [str(lbl) for lbl in inference_service.id_to_label]
+
+
 if __name__ == "__main__":
     import uvicorn
 

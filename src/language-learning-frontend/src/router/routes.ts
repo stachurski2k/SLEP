@@ -3,6 +3,7 @@ export const routes = {
   register: '/register',
   lessons: '/lessons',
   lesson: '/lessons/:lessonId',
+  admin: '/admin',
 } as const
 
 export function getLessonPath(lessonId: string) {

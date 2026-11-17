@@ -90,6 +90,9 @@ class ExerciseApplicationServiceImpl(ExerciseApplicationService):
         exercises = await self._exercise_repo.list_by_lesson(lesson_id)
         return [self._to_public_dto(e) for e in exercises]
 
+    async def getExercisesByLessonFull(self, lesson_id: UUID) -> list[Exercise]:
+        return await self._exercise_repo.list_by_lesson(lesson_id)
+
     async def validateAnswer(self, command: ValidateAnswerCommand) -> ValidationResultDTO:
         exercise = await self._exercise_repo.get_by_id(command.exerciseId)
         if exercise is None:

@@ -347,6 +347,13 @@ def test_api_unit_and_exercise_endpoints(client):
     admin_data = res.json()
     assert admin_data["answer"] == "cześć"
 
+    # 6b. Admin GET full exercises by lesson endpoint
+    res = client.get(f"/api/v1/exercises/by-lesson/{lesson_id}/full")
+    assert res.status_code == 200, res.text
+    admin_exercises = res.json()
+    assert len(admin_exercises) >= 1
+    assert admin_exercises[0]["answer"] == "cześć"
+
     # 7. Validate exercise instant feedback
     res = client.post(
         f"/api/v1/exercises/{ex_id}/validate",

@@ -101,5 +101,9 @@ class ExerciseApplicationService(ABC):
         ...
 
     @abstractmethod
+    async def getExercisesByLessonFull(self, lesson_id: UUID) -> list[Exercise]:
+        ...
+
+    @abstractmethod
     async def validateAnswer(self, command: ValidateAnswerCommand) -> ValidationResultDTO:
         ...
