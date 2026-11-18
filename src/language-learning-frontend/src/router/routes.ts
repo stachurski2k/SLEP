@@ -3,6 +3,7 @@ export const routes = {
   register: '/register',
   lessons: '/lessons',
   lesson: '/lessons/:lessonId',
+  statistics: '/statistics',
   admin: '/admin',
 } as const
 

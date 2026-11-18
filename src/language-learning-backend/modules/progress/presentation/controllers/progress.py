@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Body, Depends, status
 
 from modules.auth.presentation.dependencies import get_current_user_id
 
@@ -12,6 +12,7 @@ from ...application.commands import (
 from ...application.interfaces import ProgressApplicationService
 from ..dependencies import get_progress_service
 from ..schemas import (
+    CompleteLessonRequest,
     LessonCompletionResponse,
     LessonProgressResponse,
     ProgressSummaryResponse,
@@ -67,15 +68,17 @@ async def start_lesson(
 @progress_router.post("/lessons/{lesson_id}/complete", response_model=LessonCompletionResponse)
 async def complete_lesson(
     lesson_id: UUID,
+    payload: CompleteLessonRequest | None = Body(default=None),
     current_user_id: UUID = Depends(get_current_user_id),
     service: ProgressApplicationService = Depends(get_progress_service),
 ) -> LessonCompletionResponse:
     """
     Completes a lesson.
-    Awards 10 XP on the first completion and updates global user XP.
+    Awards XP (defaults to 10 XP) on the first completion and updates global user XP.
     Subsequent completions do not award extra XP.
     """
-    command = CompleteLessonCommand(userId=current_user_id, lessonId=lesson_id, xpReward=10)
+    xp_reward = payload.xpReward if payload is not None else 10
+    command = CompleteLessonCommand(userId=current_user_id, lessonId=lesson_id, xpReward=xp_reward)
     result_dto = await service.completeLesson(command)
     return LessonCompletionResponse.model_validate(result_dto)
 

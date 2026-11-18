@@ -29,6 +29,23 @@ export default function Sidebar() {
           Lessons
         </NavLink>
 
+        <NavLink
+          to={routes.statistics}
+          className={({ isActive }) =>
+            [
+              'flex items-center gap-3 rounded-[14px] border px-4 py-3.5 text-sm font-medium no-underline transition-colors',
+              isActive
+                ? 'border-emerald-300/30 bg-[linear-gradient(180deg,rgba(61,217,179,0.18),rgba(75,123,255,0.12))] text-white'
+                : 'border-transparent text-[#738099] hover:border-slate-400/20 hover:bg-slate-400/5 hover:text-white',
+            ].join(' ')
+          }
+        >
+          <span className="grid size-6 place-items-center rounded-lg bg-white/8 text-xs text-sky-300" aria-hidden="true">
+            📊
+          </span>
+          Statistics
+        </NavLink>
+
         {isAdmin && (
           <NavLink
             to={routes.admin}

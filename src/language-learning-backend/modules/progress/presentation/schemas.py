@@ -31,6 +31,12 @@ class LessonProgressResponse(BaseModel):
     lastAttemptAt: Optional[datetime] = None
 
 
+class CompleteLessonRequest(BaseModel):
+    """Optional request payload when completing a lesson."""
+
+    xpReward: int = Field(default=10, ge=1, le=1000, description="XP reward for first completion")
+
+
 class LessonCompletionResponse(BaseModel):
     """Response returned upon completing a lesson."""
 

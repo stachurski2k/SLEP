@@ -3,11 +3,14 @@ import { Navigate, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { fetchLessonDetails, validateExerciseAnswer } from '../../api/learning'
 import { predictGesture } from '../../api/prediction'
+import { completeLessonProgress, startLessonProgress } from '../../api/progress'
+import { recordDailyActivity } from '../../api/statistics'
 import { panelClass, primaryButtonClass } from '../../components/ui/classes'
 import { lessons as staticLessons } from '../../data/lessons'
 import { routes } from '../../router/routes'
 import type { LessonEntity, MediaAsset } from '../../types/learning'
 import type { Lesson as StaticLesson } from '../../types/lesson'
+import type { LessonCompletionResult } from '../../types/progress'
 
 import { parseMediaUrl } from '../../utils/media'
 
@@ -134,6 +137,7 @@ function LessonSession({
   const [isMiniPlayerVisible, setIsMiniPlayerVisible] = useState(true)
   const [isExpandedModal, setIsExpandedModal] = useState(false)
   const [earnedPointsTotal, setEarnedPointsTotal] = useState(0)
+  const [completionResult, setCompletionResult] = useState<LessonCompletionResult | null>(null)
   const [mediaLoadError, setMediaLoadError] = useState(false)
 
   const currentExercise = exercises[exerciseIndex]
@@ -141,6 +145,11 @@ function LessonSession({
 
   useEffect(() => {
     isMountedRef.current = true
+    if (dynamicLesson?.id && exercises.length > 0) {
+      void startLessonProgress(dynamicLesson.id).catch(() => {
+        // Ignore if offline
+      })
+    }
     return () => {
       isMountedRef.current = false
       if (recordingTimeoutRef.current !== null) window.clearTimeout(recordingTimeoutRef.current)
@@ -154,7 +163,7 @@ function LessonSession({
       }
       stopStream(streamRef.current)
     }
-  }, [])
+  }, [dynamicLesson?.id, exercises.length])
 
   if (exercises.length === 0) {
     return (
@@ -225,8 +234,12 @@ function LessonSession({
           result.label.trim().toUpperCase() === currentExercise.expectedLabel.trim().toUpperCase()
       }
 
+      const nextTotalPoints = isCorrect
+        ? earnedPointsTotal + currentExercise.points
+        : earnedPointsTotal
+
       if (isCorrect) {
-        setEarnedPointsTotal((prev) => prev + currentExercise.points)
+        setEarnedPointsTotal(nextTotalPoints)
       }
 
       setLessonState(isCorrect ? 'correct' : 'incorrect')
@@ -236,7 +249,32 @@ function LessonSession({
         if (isCorrect && exerciseIndex === exercises.length - 1) {
           stopStream(streamRef.current)
           streamRef.current = null
-          setIsComplete(true)
+
+          const finalizeLesson = async () => {
+            if (dynamicLesson?.id) {
+              try {
+                const res = await completeLessonProgress(
+                  dynamicLesson.id,
+                  Math.max(nextTotalPoints, 10),
+                )
+                if (isMountedRef.current) {
+                  setCompletionResult(res)
+                }
+              } catch {
+                // Ignore if offline
+              }
+            } else {
+              await recordDailyActivity({
+                xp: Math.max(nextTotalPoints, 10),
+                lessonsCompleted: 1,
+              }).catch(() => null)
+            }
+            if (isMountedRef.current) {
+              setIsComplete(true)
+            }
+          }
+
+          void finalizeLesson()
           return
         }
         if (isCorrect) {
@@ -319,16 +357,43 @@ function LessonSession({
           </p>
           <h2 className="mt-3 mb-0 text-3xl font-semibold text-white">Congratulations!</h2>
           <p className="mt-3 text-[#a8b0c3]">
-            You have successfully completed all {exercises.length} exercises. Earned points:{' '}
-            <strong className="text-emerald-300 font-bold">+{earnedPointsTotal} pts</strong>.
+            You have successfully completed all {exercises.length} exercises. Session score:{' '}
+            <strong className="font-bold text-emerald-300">+{earnedPointsTotal} pts</strong>.
           </p>
-          <button
-            type="button"
-            className={`${primaryButtonClass} mt-8`}
-            onClick={() => navigate(routes.lessons)}
-          >
-            Back to lessons
-          </button>
+
+          {completionResult && (
+            <div className="mt-4 rounded-xl border border-slate-400/20 bg-white/[0.03] px-4 py-3 text-xs text-[#a8b0c3]">
+              {completionResult.isFirstCompletion ? (
+                <span>
+                  First-time completion bonus:{' '}
+                  <strong className="text-amber-300">+{completionResult.earnedXp} XP</strong> awarded!
+                  Total XP: <strong className="text-white">{completionResult.totalXp} XP</strong>
+                </span>
+              ) : (
+                <span>
+                  Repeat practice session completed! Total XP:{' '}
+                  <strong className="text-white">{completionResult.totalXp} XP</strong>
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              className={primaryButtonClass}
+              onClick={() => navigate(routes.lessons)}
+            >
+              Back to lessons
+            </button>
+            <button
+              type="button"
+              className="cursor-pointer rounded-xl border border-slate-400/25 bg-slate-400/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-emerald-300/40 hover:bg-slate-400/15"
+              onClick={() => navigate(routes.statistics)}
+            >
+              📊 View Statistics
+            </button>
+          </div>
         </div>
       </section>
     )
