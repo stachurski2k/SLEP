@@ -41,7 +41,7 @@ export default function Sidebar() {
           }
         >
           <span className="grid size-6 place-items-center rounded-lg bg-white/8 text-xs text-sky-300" aria-hidden="true">
-            📊
+            ▤
           </span>
           Statistics
         </NavLink>

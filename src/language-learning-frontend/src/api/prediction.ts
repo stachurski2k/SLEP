@@ -5,11 +5,22 @@ export async function predictGesture(video: Blob, signal?: AbortSignal): Promise
   const formData = new FormData()
   formData.append('video', video, 'gesture.webm')
 
-  const response = await fetch(`${modelServiceUrl}/api/v1/predict`, {
-    method: 'POST',
-    body: formData,
-    signal,
-  })
+  let response: Response
+  try {
+    response = await fetch(`${modelServiceUrl}/api/v1/predict`, {
+      method: 'POST',
+      body: formData,
+      signal,
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error
+    }
+    throw new Error(
+      `Model service (${modelServiceUrl}) is unreachable. Make sure model-service is running on port 5001.`,
+      { cause: error },
+    )
+  }
 
   if (!response.ok) {
     throw new Error(

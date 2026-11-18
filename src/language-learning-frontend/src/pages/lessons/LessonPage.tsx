@@ -391,7 +391,7 @@ function LessonSession({
               className="cursor-pointer rounded-xl border border-slate-400/25 bg-slate-400/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-emerald-300/40 hover:bg-slate-400/15"
               onClick={() => navigate(routes.statistics)}
             >
-              📊 View Statistics
+              View Statistics
             </button>
           </div>
         </div>

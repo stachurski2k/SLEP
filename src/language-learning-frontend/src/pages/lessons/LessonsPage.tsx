@@ -82,7 +82,7 @@ export default function LessonsPage() {
         <div className="flex flex-wrap items-center gap-2.5">
           {progress && (
             <div className="inline-flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-bold text-amber-300">
-              <span>⚡ {progress.totalXp} XP</span>
+              <span>{progress.totalXp} XP</span>
             </div>
           )}
 
@@ -91,7 +91,7 @@ export default function LessonsPage() {
             onClick={() => navigate(routes.statistics)}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-400/20 bg-slate-400/5 px-3.5 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-emerald-300/40 hover:text-white"
           >
-            <span>📊 View Statistics</span>
+            <span>Statistics</span>
           </button>
 
           {hasDynamicContent && (
