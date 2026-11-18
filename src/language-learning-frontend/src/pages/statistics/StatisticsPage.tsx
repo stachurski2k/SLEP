@@ -112,7 +112,7 @@ export default function StatisticsPage() {
   }, [breakdown, chartMetric])
 
   return (
-    <section className="mx-auto w-full max-w-5xl py-2">
+    <section className="mx-auto w-full max-w-6xl py-2">
       <div>
         <h2 className="m-0 text-2xl font-semibold tracking-tight text-white">Statistics</h2>
         <p className="mt-1 mb-0 text-sm text-[#a8b0c3]">
@@ -198,11 +198,11 @@ export default function StatisticsPage() {
             </div>
 
             {/* Bars Only */}
-            <div className="mt-6 grid h-56 grid-cols-7 items-end gap-2 pt-6 sm:gap-4">
+            <div className="mt-8 grid h-80 grid-cols-7 items-end gap-3 pt-4 sm:h-96 sm:gap-6">
               {breakdown.map((day) => {
                 const value = chartMetric === 'xp' ? day.xpEarned : day.lessonsCompleted
                 const heightPercent = Math.round((value / maxMetricValue) * 100)
-                const barHeight = value > 0 ? Math.max(heightPercent, 8) : 4
+                const barHeight = value > 0 ? Math.max(heightPercent, 6) : 3
                 const isToday = day.date === todayIso
 
                 return (
@@ -218,7 +218,7 @@ export default function StatisticsPage() {
                       {value}
                     </span>
 
-                    <div className="relative flex h-40 w-full max-w-[44px] items-end justify-center rounded-t-lg bg-slate-800/30 p-1">
+                    <div className="relative flex h-64 w-full max-w-[56px] items-end justify-center rounded-t-lg bg-slate-800/30 p-1 sm:h-80">
                       <div
                         className={`w-full rounded-t-md transition-all duration-500 ${
                           value > 0

@@ -4,7 +4,7 @@ import { fetchUnits } from '../../api/learning'
 import { fetchProgressSummary } from '../../api/progress'
 import { panelClass, primaryButtonClass } from '../../components/ui/classes'
 import { lessons as staticLessons } from '../../data/lessons'
-import { getLessonPath, routes } from '../../router/routes'
+import { getLessonPath } from '../../router/routes'
 import type { UnitEntity } from '../../types/learning'
 import type { ProgressSummary } from '../../types/progress'
 
@@ -79,28 +79,6 @@ export default function LessonsPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {progress && (
-            <div className="inline-flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-bold text-amber-300">
-              <span>{progress.totalXp} XP</span>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={() => navigate(routes.statistics)}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-400/20 bg-slate-400/5 px-3.5 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-emerald-300/40 hover:text-white"
-          >
-            <span>Statistics</span>
-          </button>
-
-          {hasDynamicContent && (
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
-              <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-              Active Course Units
-            </span>
-          )}
-        </div>
       </div>
 
       {/* Overall Course Progress Card */}
@@ -143,11 +121,10 @@ export default function LessonsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-400/15 pb-2">
                   <div className="flex items-center gap-2.5">
                     <span
-                      className={`rounded-lg px-2.5 py-0.5 text-xs font-bold ${
-                        isUnitDone
+                      className={`rounded-lg px-2.5 py-0.5 text-xs font-bold ${isUnitDone
                           ? 'bg-emerald-400 text-black'
                           : 'bg-emerald-500/20 text-emerald-300'
-                      }`}
+                        }`}
                     >
                       {isUnitDone ? '✓ ' : ''}Unit {unit.order}
                     </span>
@@ -175,9 +152,8 @@ export default function LessonsPage() {
                       return (
                         <article
                           key={lesson.id}
-                          className={`${panelClass} flex flex-col justify-between gap-4 p-5 transition hover:border-emerald-500/30 ${
-                            isCompleted ? 'border-emerald-400/25' : ''
-                          }`}
+                          className={`${panelClass} flex flex-col justify-between gap-4 p-5 transition hover:border-emerald-500/30 ${isCompleted ? 'border-emerald-400/25' : ''
+                            }`}
                         >
                           <div className="min-w-0">
                             <div className="flex items-center justify-between gap-2">
@@ -191,11 +167,10 @@ export default function LessonsPage() {
                                   </span>
                                 )}
                                 <span
-                                  className={`rounded-full px-2 py-0.5 text-[0.68rem] font-semibold tracking-wide uppercase ${
-                                    lesson.status === 'published'
+                                  className={`rounded-full px-2 py-0.5 text-[0.68rem] font-semibold tracking-wide uppercase ${lesson.status === 'published'
                                       ? 'bg-emerald-500/15 text-emerald-300'
                                       : 'bg-amber-500/15 text-amber-300'
-                                  }`}
+                                    }`}
                                 >
                                   {lesson.status === 'published' ? 'Published' : 'Draft'}
                                 </span>
