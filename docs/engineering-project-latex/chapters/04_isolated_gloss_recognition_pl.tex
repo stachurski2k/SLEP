@@ -151,6 +151,28 @@ czasowego, który może być zrealizowany jako Transformer, LSTM, GRU, BiLSTM
 lub BiGRU (Rysunek~\ref{fig:model-architecture}). Enkoder działa na całym
 zakresie czasowym sekwencji, generując sekwencję osadzeń uwzględniających
 kontekst czasowy, po jednym dla każdej klatki wejściowej.
+W enkoderach rekurencyjnych oraz Transformerze sekwencja wyjściowa jest
+agregowana za pomocą uśredniania wzdłuż osi czasu (mean pooling). Oznacza
+to, że wektory kontekstowe odpowiadające poszczególnym klatkom są uśredniane,
+a uzyskana reprezentacja jest przekazywana do głowicy embeddingu. Głowica
+rzutuje ją do wektora o wymiarze 64, stanowiącego reprezentację całego gestu.
+Dzięki temu niezależnie od długości sekwencji wejściowej każdy gest jest
+opisywany wektorem o stałym wymiarze.
+
+Po wytrenowaniu enkodera nagrania ze zbioru treningowego są przetwarzane
+przez ten model, a otrzymane embeddingi wraz z odpowiadającymi im etykietami
+tworzą bazę wektorową. Wektory są normalizowane do normy jednostkowej
+i zapisywane w indeksie FAISS typu \texttt{IndexFlatIP}. Podczas rozpoznawania
+nowe nagranie przechodzi tę samą ścieżkę przetwarzania i jest przekształcane
+do embeddingu zapytania. FAISS wyszukuje w indeksie jednego najbliższego
+sąsiada (\textit{1-nearest neighbor}, $k=1$), maksymalizując iloczyn skalarny
+embeddingu zapytania i wektorów zapisanych w bazie. Ponieważ wektory są
+znormalizowane, iloczyn skalarny odpowiada podobieństwu cosinusowemu.
+Etykieta gestu jest przypisywana na podstawie etykiety zapisanej przy
+znalezionym wektorze. Klasyfikacja odbywa się zatem przez porównanie
+embeddingów, bez dodatkowej warstwy klasyfikacyjnej typu softmax.
+Dzięki takiemu rozwiązaniu nie trzeba trenować ponownie modelu, gdy chcemy dokonać zmian w zbiorze glosów, wystarczy stworzyć nową bazę wektorową opartą o filmy mp4 uporządkowane w folderach pod odpowiednimi nazwami.
+Tak przygotowany model jest też w stanie rozpoznawać gestu których wcześniej nie widział w treningu, co bardzo pomaga w rozbudowie.
 
 \begin{figure}[htbp]
   \centering
@@ -241,11 +263,6 @@ klatek na podstawie ich zakodowanych reprezentacji. Ten pomocniczy cel pełni
 funkcję mechanizmu regularyzacyjnego: wymagając od enkodera zachowania
 wystarczającej ilości informacji do rekonstrukcji wejścia, ogranicza ryzyko
 załamania reprezentacji i sprzyja uczeniu gęstych osadzeń wiernych geometrii.
-Co istotne, tworzy to również podstawę dla planowanego rozszerzenia potoku
-wyszukiwania: ponieważ nauczone osadzenia pozostają zakotwiczone w strukturze
-pierwotnej przestrzeni punktów charakterystycznych, dobrze nadają się do
-wyrównywania sekwencji z wykorzystaniem Dynamic Time Warping (DTW),
-omówionego szerzej w Sekcji~\ref{sec:gloss-recognition-discussion}.
 
 Druga gałąź stosuje agregację czasową -- Global Mean Pooling wzdłuż wymiaru
 czasowego wyjścia enkodera, obliczając średnią elementową dla wszystkich
