@@ -30,11 +30,17 @@ FROM nginx:alpine
 # Copy built assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Self-signed certyfikat dla HTTPS (kamera wymaga bezpiecznego kontekstu)
+RUN apk add --no-cache openssl \
+    && mkdir -p /etc/nginx/certs \
+    && openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+        -subj "/CN=slep-language-learning" \
+        -keyout /etc/nginx/certs/key.pem -out /etc/nginx/certs/cert.pem
+
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port 80
-EXPOSE 80
+EXPOSE 80 443
 
 # Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

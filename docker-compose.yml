@@ -14,7 +14,7 @@ services:
       - slep-network
 
   s3:
-    image: minio/minio
+    image: cgr.dev/chainguard/minio:latest
     container_name: s3
     hostname: s3
     restart: unless-stopped
@@ -31,7 +31,7 @@ services:
     command: server /data --console-address ":9001"
 
   s3-dev:
-    image: minio/minio
+    image: cgr.dev/chainguard/minio:latest
     container_name: s3-dev
     hostname: s3
     restart: unless-stopped
@@ -42,7 +42,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - s3-data:/data
+      - ./tmp/s3-data:/data
     networks:
       - slep-network
     command: server /data --console-address ":9001"
@@ -78,7 +78,42 @@ services:
     depends_on:
       - postgres
 
+  language-learning-frontend:
+    build:
+      context: ./src/language-learning-frontend
+    container_name: language-learning-frontend
+    restart: unless-stopped
+    ports:
+      - 3001:80   # HTTP -> przekierowanie na HTTPS
+      - 3443:443  # HTTPS (wymagane przez kamerę)
+    # nginx proxuje /api -> :8000 i /model-service -> :5001 przez host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - language-learning-api
+      - model-service
+    networks:
+      - slep-network
 
+  model-service:
+    build:
+      context: ./src/model-service
+    container_name: model-service
+    restart: unless-stopped
+    ports:
+      - 5001:5001
+    volumes:
+      - model-service-storage:/app/storage
+    networks:
+      - slep-network
+    # GPU wymaga nvidia-container-toolkit na hoście
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   data-collection-api:
     build:
@@ -136,7 +171,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
-  s3-data:
+  model-service-storage:
 
 networks:
   slep-network:

@@ -1,8 +1,9 @@
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import config
 from app.crud.video import VideoCrud
 from app.db.database import AsyncSessionLocal
 from app.services.s3 import S3Service
@@ -25,5 +26,5 @@ async def get_video_crud(db:AsyncSession = Depends(get_db)):
 async def get_video_service(db: AsyncSession = Depends(get_db), crud: VideoCrud = Depends(get_video_crud)):
     return VideoService(db,crud)
 
-async def get_s3():
-    return S3Service()
+async def get_s3(request: Request):
+    return S3Service(public_url=config.s3_public_url or f"http://{request.url.hostname}:9000")

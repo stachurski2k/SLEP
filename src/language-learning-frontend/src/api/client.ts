@@ -1,8 +1,8 @@
 import { clearStoredSession, getStoredSession, updateStoredTokens } from '../auth/storage'
 import type { TokenResponse } from '../types/auth'
 
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
-export const modelServiceUrl = import.meta.env.VITE_MODEL_SERVICE_URL ?? 'http://localhost:5001'
+export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
+export const modelServiceUrl = import.meta.env.VITE_MODEL_SERVICE_URL ?? '/model-service'
 
 type FastApiErrorBody = {
   detail?: string | Array<{ msg?: string }>

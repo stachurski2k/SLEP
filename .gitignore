@@ -5,3 +5,5 @@ __pycache__
 research/loader/data/*
 src/data-collection-backend/create_schema_pgadmin.sql
 .env
+
+tmp/
