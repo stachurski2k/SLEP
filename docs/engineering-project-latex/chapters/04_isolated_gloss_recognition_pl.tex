@@ -151,6 +151,28 @@ czasowego, który może być zrealizowany jako Transformer, LSTM, GRU, BiLSTM
 lub BiGRU (Rysunek~\ref{fig:model-architecture}). Enkoder działa na całym
 zakresie czasowym sekwencji, generując sekwencję osadzeń uwzględniających
 kontekst czasowy, po jednym dla każdej klatki wejściowej.
+W enkoderach rekurencyjnych oraz Transformerze sekwencja wyjściowa jest
+agregowana za pomocą uśredniania wzdłuż osi czasu (mean pooling). Oznacza
+to, że wektory kontekstowe odpowiadające poszczególnym klatkom są uśredniane,
+a uzyskana reprezentacja jest przekazywana do głowicy embeddingu. Głowica
+rzutuje ją do wektora o wymiarze 64, stanowiącego reprezentację całego gestu.
+Dzięki temu niezależnie od długości sekwencji wejściowej każdy gest jest
+opisywany wektorem o stałym wymiarze.
+
+Po wytrenowaniu enkodera nagrania ze zbioru treningowego są przetwarzane
+przez ten model, a otrzymane embeddingi wraz z odpowiadającymi im etykietami
+tworzą bazę wektorową. Wektory są normalizowane do normy jednostkowej
+i zapisywane w indeksie FAISS typu \texttt{IndexFlatIP}. Podczas rozpoznawania
+nowe nagranie przechodzi tę samą ścieżkę przetwarzania i jest przekształcane
+do embeddingu zapytania. FAISS wyszukuje w indeksie jednego najbliższego
+sąsiada (\textit{1-nearest neighbor}, $k=1$), maksymalizując iloczyn skalarny
+embeddingu zapytania i wektorów zapisanych w bazie. Ponieważ wektory są
+znormalizowane, iloczyn skalarny odpowiada podobieństwu cosinusowemu.
+Etykieta gestu jest przypisywana na podstawie etykiety zapisanej przy
+znalezionym wektorze. Klasyfikacja odbywa się zatem przez porównanie
+embeddingów, bez dodatkowej warstwy klasyfikacyjnej typu softmax.
+Dzięki takiemu rozwiązaniu nie trzeba trenować ponownie modelu, gdy chcemy dokonać zmian w zbiorze glosów, wystarczy stworzyć nową bazę wektorową opartą o filmy mp4 uporządkowane w folderach pod odpowiednimi nazwami.
+Tak przygotowany model jest też w stanie rozpoznawać gestu których wcześniej nie widział w treningu, co bardzo pomaga w rozbudowie.
 
 \begin{figure}[htbp]
   \centering
@@ -241,11 +263,6 @@ klatek na podstawie ich zakodowanych reprezentacji. Ten pomocniczy cel pełni
 funkcję mechanizmu regularyzacyjnego: wymagając od enkodera zachowania
 wystarczającej ilości informacji do rekonstrukcji wejścia, ogranicza ryzyko
 załamania reprezentacji i sprzyja uczeniu gęstych osadzeń wiernych geometrii.
-Co istotne, tworzy to również podstawę dla planowanego rozszerzenia potoku
-wyszukiwania: ponieważ nauczone osadzenia pozostają zakotwiczone w strukturze
-pierwotnej przestrzeni punktów charakterystycznych, dobrze nadają się do
-wyrównywania sekwencji z wykorzystaniem Dynamic Time Warping (DTW),
-omówionego szerzej w Sekcji~\ref{sec:gloss-recognition-discussion}.
 
 Druga gałąź stosuje agregację czasową -- Global Mean Pooling wzdłuż wymiaru
 czasowego wyjścia enkodera, obliczając średnią elementową dla wszystkich
@@ -321,15 +338,53 @@ przed obliczeniem funkcji straty oraz podczas ewaluacji, co ogranicza przestrze�
 osadzeń do jednostkowej hipersfery i zapewnia równoważność podobieństwa
 cosinusowego oraz odległości euklidesowej.
 
+W projekcie stosowana jest augmentacja do wcześniej przetworzonych sekwencji landmarków.
+\begin{itemize}
+\item Szum Gaussa — do współrzędnych dodawany jest niezależny szum o odchyleniu standardowym 0,01. Ma on modelować drobne niedokładności położenia landmarków.
+\item Rozciągnięcie czasowe — losowany jest współczynnik z zakresu 0,9–1,1. Sekwencja jest interpolowana do zmienionej długości, a następnie przycinana albo uzupełniana przez powtórzenie ostatniej klatki, tak aby zachować długość 60 klatek.
+\item Warping czasowy — z prawdopodobieństwem 0,4 oś czasu jest nieliniowo deformowana. Cztery punkty pośrednie są losowo przesuwane, a końce sekwencji pozostają ustalone. Transformacja zmienia lokalne tempo wykonywania gestu.
+\item Skalowanie współrzędnych — wszystkie cechy są mnożone przez jeden współczynnik losowany z zakresu 0,95–1,05.
+\item Odbicie poziome — z prawdopodobieństwem 0,5 negowane są współrzędne X, a bloki cech lewej i prawej strony ciała są zamieniane.
+\item Dropout landmarków — każdy z 48 trójwymiarowych punktów jest niezależnie zerowany z prawdopodobieństwem 0,03. Zerowanie obejmuje cały przebieg czasowy danego punktu; średnio dotyczy około 1,44 punktu na augmentowaną sekwencję.
+\end{itemize}
+Augmentacja nie zwiększa liczby zapisanych próbek. Zwiększa natomiast różnorodność danych widzianych przez model: kolejne pobranie tej samej próbki może zawierać inny zestaw zakłóceń i transformacji. Może to ograniczać nadmierne dopasowanie do konkretnych nagrań i poprawiać odporność na zmienność ruchu lub detekcji landmarków. Wiąże się jednak z dodatkowym kosztem obliczeniowym, ponieważ transformacje są wykonywane wielokrotnie podczas treningu, a nie jednorazowo przy przygotowywaniu zbioru.
+
+W zastosowanych encoderach wyjściowe reprezentacje kolejnych klatek są uśredniane wzdłuż osi czasu (mean(dim=1)). Otrzymany wektor przechodzi następnie przez głowicę embeddingu, która tworzy 64‑wymiarową reprezentację całego gestu.
+Pooling zapewnia stały rozmiar embeddingu i agreguje informację z całej sekwencji, ograniczając zależność reprezentacji od dokładnego położenia gestu w czasie. Jednocześnie uśrednianie może osłabiać wpływ krótkich, charakterystycznych fragmentów ruchu.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.55\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/train-results/val-class-full.png}
+    \caption{Trening pełny}
+    \label{fig:class_aug}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/train-results/val-class-no-aug.png}
+    \caption{Trening bez augmentacji}
+    \label{fig:class_no_aug}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/train-results/val-class-no-pool.png}
+    \caption{Trening bez poolingu}
+    \label{fig:class_no_aug}
+  \end{subfigure}
+  \caption{Porówniane wpływu metod treningu na wizualizacji t-SNE}
+  \label{fig:training-ema-comparison}
+\end{figure}
+
 Trening wykorzystuje optymalizator Adam z początkowym współczynnikiem uczenia
-$5\times10^{-4}$ oraz harmonogram Cosine Annealing with Warm Restarts
-($T_0=30$, $T_{mult}=2$, $\eta_{min}=1\times10^{-6}$;
+$\times10^{-4}$ oraz harmonogram Cosine Annealing with Warm Restarts
+($T_0=10$, $T_{mult}=0.5$, $\eta_{min}=1\times10^{-6}$;
 Rysunek~\ref{fig:lr-schedule}), w którym współczynnik uczenia maleje zgodnie
 z krzywą cosinusoidalną od aktualnej wartości maksymalnej do $\eta_{min}$,
 po czym jest okresowo ponownie zwiększany; odstęp pomiędzy kolejnymi
 restartami jest podwajany po każdym cyklu. Partie treningowe są konstruowane
-za pomocą próbnika $P \times K$, gdzie $P=16$ oznacza klas, a $K=4$ próbki
-na klasę, co daje partie liczące do 64 próbek -- jest to strategia
+za pomocą próbnika $P \times K$, gdzie $P=20$ oznacza klas, a $K=4$ próbki
+na klasę, co daje partie liczące do 80 próbek -- jest to strategia
 zrównoważonego próbkowania klasowego, będąca warunkiem skutecznego uczenia
 metrycznego, ponieważ zapewnia wystarczającą liczbę par pozytywnych
 i negatywnych w każdej partii, aby funkcja MS mogła generować informatywne
@@ -344,11 +399,32 @@ enkoder bez zdominowania celu uczenia metrycznego.
   \label{fig:lr-schedule}
 \end{figure}
 
+\newpage
 Od epoki 30 utrzymywana jest średnia krocząca wykładnicza (EMA) wag modelu
-ze współczynnikiem zaniku 0.99; od tego momentu model EMA jest używany
+ze współczynnikiem zaniku 0.98; od tego momentu model EMA jest używany
 wyłącznie do walidacji i zapisywania checkpointów zamiast surowego stanu
 parametrów, co zazwyczaj zapewnia bardziej stabilną i lepiej generalizującą
-ewaluację. Wydajność modelu oceniana jest na zbiorze walidacyjnym za pomocą
+ewaluację. 
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/train-results/train-full.png}
+    \caption{Przebieg treningu z EMA.}
+    \label{fig:train_full}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/train-results/train-no-ema.png}
+    \caption{Przebieg treningu bez EMA.}
+    \label{fig:train_no_ema}
+  \end{subfigure}
+  \caption{Porównanie przebiegu treningu z EMA i bez EMA.}
+  \label{fig:training-ema-comparison}
+\end{figure}
+
+Wydajność modelu oceniana jest na zbiorze walidacyjnym za pomocą
 dokładności 1-najbliższego sąsiada (1-NN) w nauczonej przestrzeni osadzeń --
 każdej próbce walidacyjnej przypisywana jest etykieta jej pojedynczego
 najbliższego sąsiada w przestrzeni osadzeń utworzonej na podstawie zbioru
@@ -356,6 +432,8 @@ treningowego. Zachowywany jest checkpoint osiągający najwyższą dokładność
 1-NN, przy czym strata walidacyjna służy jako kryterium rozstrzygające
 w przypadku remisu; trening podlega również wczesnemu zatrzymaniu
 z cierpliwością wynoszącą 50 epok.
+
+
 
 \subsubsection{Metryki ogólne}
 
@@ -375,34 +453,45 @@ i pozytywnych, podsumowująca strukturę dyskryminacyjną w jednej wartości).
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.48\textwidth]{figures/gloss-recognition/accuracy-validation.png}\hfill
-  \includegraphics[width=0.48\textwidth]{figures/gloss-recognition/loss-validation.png}
-  \caption{Dokładność walidacyjna (po lewej) oraz strata walidacyjna (po prawej)
-  dla pięciu analizowanych enkoderów czasowych.}
-  \label{fig:accuracy-loss}
+  \includegraphics[width=1\textwidth]{figures/train-results/acc-per-model.png}
+  \caption{Dokłądność na zbiorze walidacyjnym.}
+  \label{fig:acc-per-model}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.32\textwidth]{figures/gloss-recognition/train-positive-distance.png}\hfill
-  \includegraphics[width=0.32\textwidth]{figures/gloss-recognition/train-negative-distance.png}\hfill
-  \includegraphics[width=0.32\textwidth]{figures/gloss-recognition/train-distance-margin.png}
-  \caption{Odległość par pozytywnych, odległość par negatywnych oraz margines
-  odległości (trening vs.\ walidacja) dla pięciu analizowanych enkoderów czasowych.}
+  \includegraphics[width=1\textwidth]{figures/train-results/train-val-loss.png}
+  \caption{Porównianie złożoności funkcji straty na treningu i walidacji.}
+  \label{fig:train-val-loss}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/train-results/pos-distances.png}\hfill
+  \includegraphics[width=0.8\textwidth]{figures/train-results/neg-distances.png}\hfill
+  \includegraphics[width=0.8\textwidth]{figures/train-results/diff-distances.png}\hfill
+  \caption{Odległość par pozytywnych, odległość par negatywnych oraz różnica między nimi dla pięciu analizowanych enkoderów czasowych.}
   \label{fig:distance-metrics}
 \end{figure}
 
-Jak przedstawiono na Rysunkach~\ref{fig:accuracy-loss} i
-\ref{fig:distance-metrics}, enkoder Transformer osiąga najlepsze wyniki
+\newpage 
+Jak przedstawiono na Rysunkach~\ref{fig:acc-per-model},
+\ref{fig:train-val-loss} oraz \ref{fig:distance-metrics}, enkoder Transformer osiąga najlepsze wyniki
 w większości raportowanych metryk, uzyskując najwyższą dokładność 1-NN
-(\textbf{90.75\%}), najniższą złożoną funkcję straty, największy margines
+(\textbf{91.11\%}), najniższą złożoną funkcję straty na zbiorz treningowym, największy margines
 odległości oraz najmniejszą odległość par pozytywnych. Jedynym wyjątkiem
-jest średnia odległość par negatywnych, dla której Transformer jest
-nieznacznie wyprzedzany przez enkodery BiGRU i LSTM; różnica ta jest jednak
+jest złożoność funkcji straty na zbiorze walidacyjnym, gdzie nieznacznie ustępuje enkoderowi BiLSTM; różnica ta jest jednak
 pomijalnie mała i nie wpływa znacząco na ogólny ranking. Łącznie wyniki te
 wskazują, że Transformer jest najbardziej skutecznym enkoderem czasowym
 w ramach proponowanej architektury. Cała dalsza analiza jest zatem
 prowadzona wyłącznie z wykorzystaniem enkodera Transformer.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=1\textwidth]{figures/train-results/models-compared.png}
+  \caption{Porównianie modeli w najważniejszych kategoriach.}
+  \label{fig:models-compared}
+\end{figure}
 
 \todo{PLACEHOLDER: Wstawić dokładne wartości dokładności 1-NN, straty,
 odległości par pozytywnych/negatywnych oraz marginesu odległości dla enkoderów
@@ -430,7 +519,7 @@ niż klasyfikator softmax o stałych granicach klas.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.6\textwidth]{figures/gloss-recognition/confusion-matrix.png}
+  \includegraphics[width=0.6\textwidth]{figures/train-results/confusion-matrix.png}
   \caption{Macierz pomyłek dla zbioru walidacyjnego obejmującego 32 glosy
   (enkoder Transformer).}
   \label{fig:confusion-matrix}
@@ -449,7 +538,7 @@ są często poświęcane na rzecz ogólnej dokładności.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.6\textwidth]{figures/gloss-recognition/recall-per-class.png}
+  \includegraphics[width=0.6\textwidth]{figures/train-results/recall-per-class.png}
   \caption{Czułość dla poszczególnych klas dla 32 ocenianych glos
   (enkoder Transformer).}
   \label{fig:recall-per-class}
@@ -479,8 +568,8 @@ na konkretne osoby migające obecne w zbiorze treningowym.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.48\textwidth]{figures/gloss-recognition/tsne-training.png}\hfill
-  \includegraphics[width=0.48\textwidth]{figures/gloss-recognition/tsne-validation.png}
+  \includegraphics[width=0.48\textwidth]{figures/train-results/train-class-full.png}\hfill
+  \includegraphics[width=0.48\textwidth]{figures/train-results/val-class-full.png}
   \caption{Wizualizacja t-SNE nauczonej przestrzeni osadzeń dla zbioru
   treningowego (po lewej) i walidacyjnego (po prawej).}
   \label{fig:tsne-training}
@@ -509,7 +598,7 @@ migowego.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.6\textwidth]{figures/gloss-recognition/pos-neg-distances.png}
+  \includegraphics[width=0.6\textwidth]{figures/train-results/pos-neg-distances.png}
   \caption{Ewolucja średnich odległości par pozytywnych i negatywnych
   w trakcie treningu.}
   \label{fig:pos-neg-distances}

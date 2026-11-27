@@ -58,8 +58,8 @@ PATIENCE             = 10
 FACTOR               = 0.5
 
 # ── EMA ─────────────────────────────────────────────────
-EMA_DECAY            = 0.995
-EMA_START_EPOCH      = 10
+EMA_DECAY            = 0.98
+EMA_START_EPOCH      = 30
 
 # ── EARLY STOPPING ──────────────────────────────────────
 EARLY_STOP_PATIENCE  = 50
@@ -396,14 +396,14 @@ if __name__ == "__main__":
     args = argparse.ArgumentParser()
     args.add_argument("--model", type=str, default="transformer")
     args = args.parse_args()
-    from Models.Transformer_encoder import TransformerEncoder
+    from Models.Transformer_encoder import TransformerEncoder_model
     from Models.LSTM_encoder import LSTMEncoder
     from Models.BiLSTM_encoder import BiLSTMEncoder
     from Models.GRU_encoder import GRUEncoder
     from Models.BiGRU_encoder import BiGRUEncoder
-
+    
     if args.model == "transformer":
-        model = TransformerEncoder
+        model = TransformerEncoder_model
     elif args.model == "lstm":
         model = LSTMEncoder
     elif args.model == "bilstm":
