@@ -11,7 +11,7 @@ from app.core.config import config
 logger = logging.getLogger(__name__)
 
 class S3Service:
-    def __init__(self):
+    def __init__(self, public_url: str | None = None):
         _cfg = Config(signature_version="s3v4", s3={"addressing_style": "path"})
         self.client = boto3.client(
             "s3",
@@ -23,7 +23,7 @@ class S3Service:
         )
         self._presign_client = boto3.client(
             "s3",
-            endpoint_url=config.s3_public_url,
+            endpoint_url=public_url or config.s3_public_url or config.s3_url,
             region_name="us-east-1",
             aws_access_key_id=config.s3_user,
             aws_secret_access_key=config.s3_password,
