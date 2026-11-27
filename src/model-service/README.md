@@ -24,6 +24,10 @@ This downloads into `storage/`:
 uv run uvicorn app.main:app --host 0.0.0.0 --port 5001 --reload
 ```
 
+On Windows, the service copies the MediaPipe `.task` files to the system temp
+directory before loading them. This avoids a MediaPipe native-library issue
+with project paths that contain non-ASCII characters.
+
 ## Endpoints
 
 - `POST /api/v1/predict` - multipart form upload, field name `video`. Returns `{label, score, margin}`.
@@ -32,6 +36,18 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 5001 --reload
 ```bash
 curl -F "video=@sample.mp4" http://localhost:5001/api/v1/predict
 ```
+
+## Using it from the language-learning frontend
+
+Start this service on port `5001`, then run the Vite application from
+`src/language-learning-frontend`. The lesson records a three-second WebM video
+from the browser camera and posts it to this service. The lesson progresses
+through `YES`, `NO`, and `SMILE` when the predicted label matches the current
+sign. Result feedback stays over the live preview for two seconds before
+advancing or allowing a retry.
+
+The frontend uses `http://localhost:5001` by default. To point it at another
+deployment, set `VITE_MODEL_SERVICE_URL` in the frontend environment.
 
 ## Configuration
 

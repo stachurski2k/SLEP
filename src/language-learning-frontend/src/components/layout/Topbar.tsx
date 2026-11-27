@@ -1,0 +1,52 @@
+import { useNavigate } from 'react-router'
+import { useAuth } from '../../auth/useAuth'
+import { routes } from '../../router/routes'
+
+export default function Topbar() {
+  const navigate = useNavigate()
+  const { session, logOut } = useAuth()
+
+  const handleLogOut = async () => {
+    await logOut()
+    navigate(routes.login, { replace: true })
+  }
+
+  const isAdmin = session?.role === 'admin'
+
+  return (
+    <header className="flex min-h-[76px] items-center justify-between border-b border-slate-400/15 bg-[#070b12]/70 px-7 backdrop-blur-[18px] max-[640px]:px-5">
+      <div className="flex items-center gap-3.5">
+        <span className="grid size-10 place-items-center rounded-xl bg-[linear-gradient(135deg,#39d5ab,#4778ff)] text-lg font-bold text-white shadow-[0_0_24px_rgba(75,123,255,0.4)]">
+          S
+        </span>
+        <div>
+          <p className="m-0 text-[0.72rem] tracking-[0.14em] text-[#738099] uppercase">SLEP</p>
+          <h1 className="m-0 text-xl font-semibold text-[#f5f7fb]">Sign language learning</h1>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        {session?.email && (
+          <div className="hidden items-center gap-2.5 sm:flex">
+            <span className="text-sm text-[#a8b0c3]">{session.email}</span>
+            <span
+              className={`rounded-md border px-2 py-0.5 text-[0.68rem] font-semibold tracking-wider uppercase ${
+                isAdmin
+                  ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-300'
+                  : 'border-slate-400/20 bg-slate-400/10 text-[#a8b0c3]'
+              }`}
+            >
+              {session.role}
+            </span>
+          </div>
+        )}
+        <button
+          type="button"
+          className="cursor-pointer rounded-xl border border-slate-400/15 bg-slate-400/5 px-3.5 py-2 text-sm text-[#a8b0c3] transition hover:border-emerald-300/35 hover:text-white"
+          onClick={() => void handleLogOut()}
+        >
+          Log out
+        </button>
+      </div>
+    </header>
+  )
+}

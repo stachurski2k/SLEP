@@ -11,9 +11,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.inference import InferenceService, NoGestureDetectedError, PoolExhaustedError
 
 try:
@@ -39,9 +40,27 @@ class HealthResponse(BaseModel):
     faiss_size: int
 
 
+def validate_model_artifacts(settings: Settings) -> None:
+    required_paths = (
+        settings.hand_model_path,
+        settings.pose_model_path,
+        settings.encoder_checkpoint_path,
+        settings.train_embeddings_path,
+    )
+    missing_paths = [str(path) for path in required_paths if not path.is_file()]
+    if missing_paths:
+        formatted_paths = "\n".join(f"- {path}" for path in missing_paths)
+        raise RuntimeError(
+            "Required model artifacts are missing:\n"
+            f"{formatted_paths}\n"
+            "Run `uv run scripts/fetch_artifacts.py` from src/model-service and restart the service."
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    validate_model_artifacts(settings)
     app.state.inference_service = InferenceService.from_settings(settings)
     app.state.settings = settings
     try:
@@ -55,6 +74,22 @@ app = FastAPI(
     description="Predicts a gesture class from an uploaded video via a trained sequence encoder + FAISS lookup.",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "*",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -101,6 +136,13 @@ def health(request: Request) -> HealthResponse:
         num_classes=len(inference_service.id_to_label),
         faiss_size=int(inference_service.faiss_index.ntotal),
     )
+
+
+@app.get("/api/v1/classes", response_model=list[str])
+@app.get("/api/v1/poses", response_model=list[str])
+def list_classes(request: Request) -> list[str]:
+    inference_service = get_inference_service(request)
+    return [str(lbl) for lbl in inference_service.id_to_label]
 
 
 if __name__ == "__main__":
